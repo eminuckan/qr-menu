@@ -3,8 +3,8 @@
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 
-import { createClient } from "@/lib/supabase/server"
 import { loginSchema } from "@/schemas/loginSchema"
+import { createClient } from "@/lib/supabase/server"
 
 export interface LoginState {
     errors?: {
@@ -17,57 +17,44 @@ export interface LoginState {
 }
 
 export async function login(_prevState: LoginState,formData: FormData) : Promise<LoginState> {
-    const supabase = await createClient()
-  
-    const data = {
-      email: formData.get('email') as string,
-      password: formData.get('password') as string,
-    }
-    const validatedFields = loginSchema.safeParse(data)
-    if (!validatedFields.success) {
+    const validatedData = loginSchema.safeParse({
+        email: formData.get('email'),
+        password: formData.get('password'),
+    });
+
+
+    if (!validatedData.success) {
         return {
-            errors: validatedFields.error.flatten().fieldErrors,
-            email: data.email,
-            password: data.password,
-            success: false
+            errors: validatedData.error.flatten().fieldErrors,
+            isPending: false,
+            success: false,
+            email: formData.get('email') as string,
+            password: formData.get('password') as string,
         }
     }
-  
-    const { error } = await supabase.auth.signInWithPassword(validatedFields.data)
-  
+
+    const supabase = await createClient();
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+        email: validatedData.data.email,
+        password: validatedData.data.password,
+    });
+
+    console.log(error)
+
     if (error) {
         return {
             errors: {
-                SUPABASE_ERROR: [error.message]
+                SUPABASE_ERROR: [error.code === "invalid_credentials" ? "Email veya şifre hatalı." : "Bir hata oluştu lütfen daha sonra tekrar deneyiniz."],
             },
-            email: data.email,
-            password: data.password,
-            success: false
+            isPending: false,
+            success: false,
+            email: validatedData.data.email,
+            password: validatedData.data.password,
         }
     }
-  
-    revalidatePath('/', 'layout')
-    redirect('/')
-  }
-  
 
-  // içeride kullanılacak
-  export async function signup(formData: FormData) {
-    const supabase = await createClient()
-  
-    // type-casting here for convenience
-    // in practice, you should validate your inputs
-    const data = {
-      email: formData.get('email') as string,
-      password: formData.get('password') as string,
-    }
-  
-    const { error } = await supabase.auth.signUp(data)
-  
-    if (error) {
-      redirect('/error')
-    }
-  
-    revalidatePath('/', 'layout')
-    redirect('/')
-  }
+    revalidatePath('/dashboard');
+    redirect('/dashboard');
+}
+
