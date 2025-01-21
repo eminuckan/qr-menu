@@ -17,6 +17,7 @@ import {
   UserCog,
   Menu as MenuIcon,
   Settings,
+  ChevronsUpDown,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -112,7 +113,7 @@ export const Sidebar =  () => {
                 <span className="text-sm font-medium">
                   {user?.user?.email}
                 </span>
-                <ChevronDown className="h-4 w-4 ml-auto" />
+                <ChevronsUpDown className="h-4 w-4 ml-auto" />
               </div>
             </Button>
           </DropdownMenuTrigger>
