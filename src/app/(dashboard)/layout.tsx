@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
-import { Inter as FontInter } from "next/font/google";
 import { Sidebar } from "@/components/layout/sidebar";
+import {Geist_Mono, Geist} from "next/font/google"
+
 
 import { cn } from "@/lib/utils";
 
-const inter = FontInter({
+
+const geistSans = Geist({
   subsets: ["latin"],
-  variable: "--font-inter",
+  variable: "--font-geist-sans",
 });
-
-
 
 
 export const metadata: Metadata = {
@@ -24,7 +24,7 @@ export default function DashboardLayout({
 }) {
   return (
     <div
-      className={cn("min-h-screen bg-background", inter.variable, "font-sans")}
+      className={cn("min-h-screen bg-background", geistSans.variable, "font-sans")}
     >
       <div className="flex">
         

@@ -1,8 +1,8 @@
 import type { Config } from "tailwindcss";
 
 export default {
-    darkMode: ["class"],
-    content: [
+  darkMode: ["class"],
+  content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
@@ -48,7 +48,20 @@ export default {
   				'2': 'hsl(var(--chart-2))',
   				'3': 'hsl(var(--chart-3))',
   				'4': 'hsl(var(--chart-4))',
+  				'5': 'hsl(var(--chart-5))',
+  				'1': 'hsl(var(--chart-1))',
+  				'2': 'hsl(var(--chart-2))',
+  				'3': 'hsl(var(--chart-3))',
+  				'4': 'hsl(var(--chart-4))',
   				'5': 'hsl(var(--chart-5))'
+  			},
+  			brand: {
+  				DEFAULT: 'hsl(var(--brand))',
+  				foreground: 'hsl(var(--brand-foreground))'
+  			},
+  			highlight: {
+  				DEFAULT: 'hsl(var(--highlight))',
+  				foreground: 'hsl(var(--highlight-foreground))'
   			}
   		},
   		borderRadius: {
@@ -57,16 +70,63 @@ export default {
   			sm: 'calc(var(--radius) - 4px)'
   		},
   		animation: {
-  			'shake': 'shake 0.5s linear',
+  			shake: 'shake 0.5s linear'
   		},
   		keyframes: {
   			shake: {
-  				'0%, 100%': { transform: 'translateX(0)' },
-  				'25%': { transform: 'translateX(-5px)' },
-  				'75%': { transform: 'translateX(5px)' },
-  			},
+  				'0%, 100%': {
+  					transform: 'translateX(0)'
+  				},
+  				'25%': {
+  					transform: 'translateX(-5px)'
+  				},
+  				'75%': {
+  					transform: 'translateX(5px)'
+  				}
+  			}
   		},
+  		fontFamily: {
+  			sans: [
+  				'var(--font-sans)',
+  				'ui-sans-serif',
+  				'-apple-system',
+  				'BlinkMacSystemFont',
+  				'Segoe UI Variable Display',
+  				'Segoe UI',
+  				'Helvetica',
+  				'Apple Color Emoji',
+  				'Arial',
+  				'sans-serif',
+  				'Segoe UI Emoji',
+  				'Segoe UI Symbol',
+  				'Noto Color Emoji'
+  			],
+  			mono: [
+  				'var(--font-mono)',
+  				...require("tailwindcss/defaultTheme").fontFamily.mono
+  			],
+  			heading: [
+  				'var(--font-heading)',
+  				'ui-sans-serif',
+  				'-apple-system',
+  				'BlinkMacSystemFont',
+  				'Segoe UI Variable Display',
+  				'Segoe UI',
+  				'Helvetica',
+  				'Apple Color Emoji',
+  				'Arial',
+  				'sans-serif',
+  				'Segoe UI Emoji',
+  				'Segoe UI Symbol',
+  				'Noto Color Emoji'
+  			]
+  		},
+  		screens: {
+  			'main-hover': {
+  				raw: '(hover: hover)'
+  			}
+  		}
   	}
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [require("tailwindcss-animate"),require('@tailwindcss/typography'), require("tailwind-scrollbar-hide")],
 } satisfies Config;

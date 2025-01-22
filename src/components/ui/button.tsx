@@ -3,9 +3,10 @@ import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
 import { Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import Link from "next/link"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-base font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-5 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
@@ -21,10 +22,10 @@ const buttonVariants = cva(
         menu: "bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white"
       },
       size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3",
-        lg: "h-11 rounded-md px-8",
-        icon: "h-10 w-10",
+        default: "h-12 px-5 py-2",
+        sm: "h-10 rounded-md px-4",
+        lg: "h-14 rounded-md px-8",
+        icon: "h-12 w-12",
       },
     },
     defaultVariants: {
@@ -39,23 +40,36 @@ export interface ButtonProps
     VariantProps<typeof buttonVariants> {
   asChild?: boolean
   isLoading?: boolean
+  as?: 'button' | 'a' | 'link'
+  href?: string
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, isLoading, children, disabled, ...props }, ref) => {
-    const Comp = asChild ? Slot : "button"
+  ({ className, variant, size, asChild = false, isLoading, children, disabled, as = 'button', href, ...props }, ref) => {
+    let Comp: any = as === 'button' ? 'button' : as === 'a' ? 'a' : Link
+    
+    if (asChild) {
+      Comp = Slot
+    }
+
+    const commonProps = {
+      className: cn(buttonVariants({ variant, size, className })),
+      ref,
+      disabled: disabled || isLoading,
+      ...props,
+    }
+
+    if (as === 'a' && href) {
+      return <Comp href={href} {...commonProps}>{isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : children}</Comp>
+    }
+
+    if (as === 'link' && href) {
+      return <Comp href={href} {...commonProps}>{isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : children}</Comp>
+    }
+
     return (
-      <Comp
-        className={cn(buttonVariants({ variant, size, className }))}
-        ref={ref}
-        disabled={disabled || isLoading}
-        {...props}
-      >
-        {isLoading ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          children
-        )}
+      <Comp {...commonProps}>
+        {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : children}
       </Comp>
     )
   }
