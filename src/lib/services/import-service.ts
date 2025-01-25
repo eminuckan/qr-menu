@@ -55,6 +55,15 @@ export interface ImportContext {
 const RATE_LIMIT_DURATION = 180; // saniye cinsinden
 let lastRequestTime: number | null = null;
 
+// API anahtarlarını env'den al
+const API_KEY = process.env.NEXT_PUBLIC_ADISYO_API_KEY;
+const API_SECRET = process.env.NEXT_PUBLIC_ADISYO_API_SECRET;
+const API_CONSUMER = process.env.NEXT_PUBLIC_ADISYO_API_CONSUMER;
+
+if (!API_KEY || !API_SECRET || !API_CONSUMER) {
+    throw new Error('Adisyo API bilgileri eksik. Lütfen .env dosyasını kontrol edin.');
+}
+
 export const ImportService = {
     async importMenuFromAdisyo(
         context: ImportContext,
@@ -129,11 +138,11 @@ export const ImportService = {
             // API'den veriyi al
             const response = await fetch('https://ext.adisyo.com/api/External/v2/Products', {
                 headers: {
-                    'x-api-key': '25b80b3556ca3a15353dd2fd312062fad27adcf5a1de51b75bdadea1fa8214ab',
-                    'x-api-secret': 'e2c87e86-268f-4b47-98ee-d457cdda3d3d',
-                    'x-api-consumer': 'lavincafe'
+                    'x-api-key': API_KEY,
+                    'x-api-secret': API_SECRET,
+                    'x-api-consumer': API_CONSUMER
                 },
-                signal: abortController.signal // Abort controller'ı ekle
+                signal: abortController.signal
             });
 
             console.log('API yanıt durumu:', response.status);
