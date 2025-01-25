@@ -9,19 +9,15 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MultiSelectInput } from "@/components/ui/multi-select-input";
 import { TiptapEditor } from "@/components/ui/tiptap-editor";
 import { FileDropzone } from "@/components/ui/file-dropzone";
 import { AllergenLabels, ProductTagLabels } from "@/types/database";
 import { useEffect, useState } from "react";
 import { ColorPicker } from "@/components/ui/color-picker";
-import { ProductService } from "@/lib/services/product-service";
-import { PlusIcon } from "lucide-react";
 import { UnitSelect } from "@/components/ui/unit-select";
 import { DialogClose } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
 import { X } from "lucide-react";
@@ -53,7 +49,6 @@ export function ProductForm({
   isSubmitting = false,
   isEdit = false
 }: ProductFormProps) {
-  const [isUploading, setIsUploading] = useState(false);
   const [productImages, setProductImages] = useState<FormProductImage[]>([]);
   const { toast } = useToast();
 
@@ -82,7 +77,6 @@ export function ProductForm({
     }
   });
 
-  // Mevcut fotoğrafları yükle
   useEffect(() => {
     if (product?.product_images) {
       const existingImages = product.product_images.map(img => ({
@@ -93,7 +87,7 @@ export function ProductForm({
       }));
       setProductImages(existingImages);
     } else {
-      setProductImages([]); // Fotoğraf yoksa state'i temizle
+      setProductImages([]);
     }
   }, [product]);
 
@@ -106,7 +100,6 @@ export function ProductForm({
     }));
 
     setProductImages(prev => {
-      // İlk fotoğraf yoksa cover yap
       if (prev.length === 0 && newImages.length > 0) {
         newImages[0].is_cover = true;
       }
@@ -124,7 +117,6 @@ export function ProductForm({
   const handleImageRemove = (index: number) => {
     setProductImages(prev => {
       const newImages = prev.filter((_, i) => i !== index);
-      // Eğer cover image silindiyse ve başka fotoğraf varsa, ilk fotoğrafı cover yap
       if (prev[index].is_cover && newImages.length > 0) {
         newImages[0].is_cover = true;
       }

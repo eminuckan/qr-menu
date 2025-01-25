@@ -52,10 +52,9 @@ export interface ImportContext {
     paused: boolean;
 }
 
-const RATE_LIMIT_DURATION = 180; // saniye cinsinden
+const RATE_LIMIT_DURATION = 180;
 let lastRequestTime: number | null = null;
 
-// API anahtarlarını env'den al
 const API_KEY = process.env.NEXT_PUBLIC_ADISYO_API_KEY;
 const API_SECRET = process.env.NEXT_PUBLIC_ADISYO_API_SECRET;
 const API_CONSUMER = process.env.NEXT_PUBLIC_ADISYO_API_CONSUMER;
@@ -71,7 +70,7 @@ export const ImportService = {
     ) {
         const supabase = createClient();
         let abortController = new AbortController();
-        let isCleaningUp = false; // Cleanup durumunu takip etmek için
+        let isCleaningUp = false;
 
         const checkAbort = async () => {
             if (context.aborted && !isCleaningUp) {
@@ -85,12 +84,11 @@ export const ImportService = {
         };
 
         const cleanup = async () => {
-            if (!context.menuId || isCleaningUp) return; // Zaten temizlik yapılıyorsa çık
+            if (!context.menuId || isCleaningUp) return;
 
             try {
                 console.log("Cleanup başlatılıyor...");
 
-                // Tüm silme işlemlerini tek bir transaction içinde yap
                 const { error } = await supabase.rpc('cleanup_import', {
                     menu_id: context.menuId,
                     category_ids: context.categoryIds
@@ -123,7 +121,6 @@ export const ImportService = {
         try {
             if (await checkAbort()) return { success: false, aborted: true, stats };
 
-            // Önce "Adisyo Menü" var mı kontrol et
             const { data: existingMenu } = await supabase
                 .from('menus')
                 .select('*')
@@ -132,10 +129,8 @@ export const ImportService = {
 
             if (await checkAbort()) return { success: false, aborted: true, stats };
 
-            // API isteği öncesi zamanı kaydet
             lastRequestTime = Date.now();
 
-            // API'den veriyi al
             const response = await fetch('https://ext.adisyo.com/api/External/v2/Products', {
                 headers: {
                     'x-api-key': API_KEY,
@@ -151,9 +146,8 @@ export const ImportService = {
             const responseData = await response.json();
             console.log('API yanıtı:', responseData);
 
-            // Rate limit kontrolü (429 veya status 601)
             if (response.status === 429 || responseData.status === 601) {
-                lastRequestTime = Date.now(); // Rate limit yenileme zamanını güncelle
+                lastRequestTime = Date.now();
                 throw new Error(`API rate limit aşıldı. Lütfen ${RATE_LIMIT_DURATION} saniye bekleyin ve tekrar deneyin.`);
             }
 
@@ -172,7 +166,6 @@ export const ImportService = {
                 throw new Error(adisyoData.message || 'Adisyo API\'den geçersiz yanıt');
             }
 
-            // İstatistikleri hazırla
             stats.totalCategories = adisyoData.data.length;
             stats.totalProducts = adisyoData.data.reduce((sum, category) => sum + category.products.length, 0);
 
@@ -181,7 +174,6 @@ export const ImportService = {
                 menuId = existingMenu.id;
                 context.menuId = menuId;
             } else {
-                // Yeni menü oluştur
                 const { data: menu, error: menuError } = await supabase
                     .from('menus')
                     .insert({
@@ -198,7 +190,6 @@ export const ImportService = {
                 context.menuId = menuId;
             }
 
-            // Kategorileri ve ürünleri içe aktar
             for (const [categoryIndex, category] of adisyoData.data.entries()) {
                 if (await checkAbort()) return { success: false, aborted: true, stats };
 
@@ -209,10 +200,8 @@ export const ImportService = {
                         stats
                     });
 
-                    // Her kategori işlemi öncesi kontrol
                     if (await checkAbort()) return { success: false, aborted: true, stats };
 
-                    // Mevcut kategoriyi kontrol et
                     const { data: existingCategory } = await supabase
                         .from('categories')
                         .select('*')
@@ -222,7 +211,6 @@ export const ImportService = {
 
                     let categoryId: string;
                     if (existingCategory) {
-                        // Kategoriyi güncelle
                         const { data: updatedCategory, error: updateError } = await supabase
                             .from('categories')
                             .update({
@@ -235,7 +223,6 @@ export const ImportService = {
                         if (updateError) throw new Error(updateError.message);
                         categoryId = existingCategory.id;
                     } else {
-                        // Yeni kategori oluştur
                         const { data: newCategory, error: categoryError } = await supabase
                             .from('categories')
                             .insert({
@@ -255,7 +242,6 @@ export const ImportService = {
                     stats.importedCategories++;
                     context.categoryIds.push(categoryId);
 
-                    // Ürünleri içe aktar
                     for (const [productIndex, product] of category.products.entries()) {
                         if (await checkAbort()) return { success: false, aborted: true, stats };
 
@@ -266,10 +252,8 @@ export const ImportService = {
                                 stats
                             });
 
-                            // Her ürün işlemi öncesi kontrol
                             if (await checkAbort()) return { success: false, aborted: true, stats };
 
-                            // Mevcut ürünü kontrol et
                             const { data: existingProduct } = await supabase
                                 .from('products')
                                 .select('*')
@@ -279,7 +263,6 @@ export const ImportService = {
 
                             let productId: string;
                             if (existingProduct) {
-                                // Ürünü güncelle
                                 const { data: updatedProduct, error: updateError } = await supabase
                                     .from('products')
                                     .update({
@@ -293,7 +276,6 @@ export const ImportService = {
                                 if (updateError) throw new Error(updateError.message);
                                 productId = existingProduct.id;
                             } else {
-                                // Yeni ürün oluştur
                                 const { data: newProduct, error: productError } = await supabase
                                     .from('products')
                                     .insert({
@@ -314,18 +296,15 @@ export const ImportService = {
                                 productId = newProduct.id;
                             }
 
-                            // Varsayılan birimi ve fiyatı güncelle/ekle
                             const defaultUnit = product.productUnits.find(u => u.isDefault);
                             if (defaultUnit) {
                                 try {
                                     console.log(`Unit işlemi başlıyor: ${defaultUnit.unitName}`);
                                     let unitId = await this._findOrCreateUnit(defaultUnit.unitName);
 
-                                    // OrderType 1 olan fiyatı al (yoksa 0)
                                     const price = defaultUnit.prices.find(p => p.orderType === 1)?.price || 0;
                                     console.log(`Fiyat ayarlanıyor: ${price} - Unit: ${defaultUnit.unitName}`);
 
-                                    // Mevcut fiyatı kontrol et
                                     const { data: existingPrice } = await supabase
                                         .from('product_prices')
                                         .select('*')
@@ -334,7 +313,6 @@ export const ImportService = {
                                         .single();
 
                                     if (existingPrice) {
-                                        // Fiyat değişmişse güncelle
                                         if (existingPrice.price !== price) {
                                             console.log(`Fiyat güncelleniyor: ${existingPrice.price} -> ${price}`);
                                             const { error: updateError } = await supabase
@@ -345,7 +323,6 @@ export const ImportService = {
                                             if (updateError) throw new Error(updateError.message);
                                         }
                                     } else {
-                                        // Yeni fiyat ekle
                                         console.log(`Yeni fiyat ekleniyor: ${price}`);
                                         const { error: priceError } = await supabase
                                             .from('product_prices')
@@ -390,11 +367,11 @@ export const ImportService = {
             if (error instanceof Error && error.name === 'AbortError') {
                 return { success: false, aborted: true, stats };
             }
-            // Rate limit hatası durumunda tam süreyi gönder
+
             if (error instanceof Error && error.message.includes('rate limit')) {
                 throw new Error(`API rate limit aşıldı. Lütfen ${RATE_LIMIT_DURATION} saniye bekleyin ve tekrar deneyin.`);
             }
-            // Rate limit hatası değilse lastRequestTime'ı sıfırla
+
             if (error instanceof Error && !error.message.includes('rate limit')) {
                 lastRequestTime = null;
             }
@@ -416,7 +393,6 @@ export const ImportService = {
         const normalizedName = unitName.toLowerCase().trim();
 
         try {
-            // Önce mevcut birimi ara
             const { data: existingUnit, error: searchError } = await supabase
                 .from('units')
                 .select()
@@ -428,7 +404,6 @@ export const ImportService = {
                 return existingUnit.id;
             }
 
-            // Mevcut birim bulunamazsa yeni birim oluştur
             console.log(`Yeni unit oluşturuluyor: ${unitName}`);
             const { data: newUnit, error: createError } = await supabase
                 .from('units')

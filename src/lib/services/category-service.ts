@@ -5,7 +5,6 @@ export const CategoryService = {
         const supabase = createClient();
 
         try {
-            // 1. Kategoriye ait ürünlerin fotoğraflarını al
             const { data: products, error: productsError } = await supabase
                 .from('products')
                 .select('id')
@@ -14,7 +13,6 @@ export const CategoryService = {
             if (productsError) throw productsError;
 
             if (products?.length) {
-                // 2. Ürünlerin fotoğraflarını al
                 const { data: productImages, error: imagesError } = await supabase
                     .from('product_images')
                     .select('image_url')
@@ -22,7 +20,6 @@ export const CategoryService = {
 
                 if (imagesError) throw imagesError;
 
-                // 3. Storage'dan ürün fotoğraflarını sil
                 if (productImages?.length) {
                     const fileNames = productImages
                         .map(img => img.image_url?.split('/').pop())
@@ -38,7 +35,6 @@ export const CategoryService = {
                 }
             }
 
-            // 4. Kategori fotoğrafını sil
             const { data: category, error: categoryError } = await supabase
                 .from('categories')
                 .select('cover_image')
@@ -56,7 +52,6 @@ export const CategoryService = {
                 }
             }
 
-            // 5. Kategoriyi sil (cascade ile ilişkili tüm veriler silinecek)
             const { error: deleteError } = await supabase
                 .from('categories')
                 .delete()

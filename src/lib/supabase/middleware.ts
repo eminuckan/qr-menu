@@ -40,7 +40,10 @@ export async function updateSession(request: NextRequest) {
 
   if (
     !user &&
-    protectedRoutes.includes(request.nextUrl.pathname)
+    protectedRoutes.some(route =>
+      request.nextUrl.pathname.startsWith(route) ||
+      request.nextUrl.pathname === route.replace(/\/$/, '')
+    )
   ) {
     // no user, potentially respond by redirecting the user to the login page
     const url = request.nextUrl.clone()
@@ -48,12 +51,18 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  if (user && authRoutes.includes(request.nextUrl.pathname)) {
+  if (
+    user &&
+    authRoutes.some(route =>
+      request.nextUrl.pathname.startsWith(route) ||
+      request.nextUrl.pathname === route.replace(/\/$/, '')
+    )
+  ) {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
     return NextResponse.redirect(url)
   }
-  
+
 
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is.

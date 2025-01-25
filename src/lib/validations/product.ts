@@ -1,5 +1,4 @@
 import * as z from "zod"
-import { AllergenType, ProductTagType } from "@/types/database"
 
 export const productFormSchema = z.object({
   name: z.string().min(1, "Ürün adı zorunludur"),

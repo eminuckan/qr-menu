@@ -28,7 +28,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -83,8 +82,6 @@ const formatCountdown = (seconds: number) => {
 const Page = () => {
   const [mounted, setMounted] = useState(false);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-  const [newMenuName, setNewMenuName] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const [importing, setImporting] = useState(false);
@@ -130,7 +127,6 @@ const Page = () => {
     }));
 
     setMenuItems(formattedMenus);
-    setIsLoading(false);
   }, []);
 
   const handleAddMenu = async (values: MenuFormValues) => {
@@ -264,7 +260,6 @@ const Page = () => {
   const handleImport = async () => {
     setImporting(true);
 
-    // Önce mevcut "Adisyo Menü"yü kontrol et
     const supabase = createClient();
     const { data: existingMenu } = await supabase
       .from('menus')
@@ -275,7 +270,6 @@ const Page = () => {
     let newMenuId: string | null = null;
 
     if (!existingMenu) {
-      // Yeni menü oluştur
       const { data: newMenu, error: menuError } = await supabase
         .from('menus')
         .insert({
@@ -297,7 +291,6 @@ const Page = () => {
         return;
       }
 
-      // Yeni menüyü listeye ekle
       setMenuItems(prev => [...prev, {
         id: newMenu.id,
         name: newMenu.name,
@@ -326,7 +319,6 @@ const Page = () => {
       );
 
       if (result.aborted) {
-        // Eğer yeni oluşturulmuş menüyse ve iptal edildiyse listeden kaldır
         if (!existingMenu) {
           setMenuItems(prev => prev.filter(item => item.id !== newMenuId));
         }
@@ -339,7 +331,6 @@ const Page = () => {
         return;
       }
 
-      // Başarılı import mesajı
       toast({
         title: "Menü Aktarımı Başarılı",
         description: `${result.stats.importedCategories}/${result.stats.totalCategories} kategori ve ${result.stats.importedProducts}/${result.stats.totalProducts} ürün aktarıldı.${result.stats.failedItems.categories.length > 0 || result.stats.failedItems.products.length > 0
@@ -349,21 +340,19 @@ const Page = () => {
         variant: "default"
       });
 
-      // Menüleri yenile
       getMenus();
 
     } catch (error) {
-      // Hata durumunda yeni oluşturulmuş menüyü listeden kaldır
+
       if (!existingMenu) {
         setMenuItems(prev => prev.filter(item => item.id !== newMenuId));
       }
 
       if (error instanceof Error && error.message.includes('rate limit')) {
         setIsRateLimited(true);
-        const duration = 180; // 3 dakika
+        const duration = 180;
         setRateLimitCountdown(duration);
 
-        // Rate limit bilgisini localStorage'a kaydet
         localStorage.setItem('importRateLimit', JSON.stringify({
           timestamp: Date.now(),
           duration: duration
@@ -396,14 +385,11 @@ const Page = () => {
       setShowAbortDialog(false);
       setIsPaused(false);
 
-      // İptal işlemi tamamlanana kadar bekle
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      // İmporting durumunu güncelle
       setImporting(false);
-
-      // İptal sonrası temizlik
       setImportProgress(null);
+
       setImportContext({
         menuId: null,
         categoryIds: [],
@@ -431,7 +417,6 @@ const Page = () => {
     setIsPaused(false);
   };
 
-  // Rate limit için localStorage kontrolü
   useEffect(() => {
     const checkRateLimit = () => {
       const storedData = localStorage.getItem('importRateLimit');
@@ -445,7 +430,6 @@ const Page = () => {
           setIsRateLimited(true);
           setRateLimitCountdown(remainingTime);
         } else {
-          // Süre bittiyse localStorage'dan sil
           localStorage.removeItem('importRateLimit');
           setIsRateLimited(false);
           setRateLimitCountdown(0);
@@ -456,14 +440,12 @@ const Page = () => {
     checkRateLimit();
   }, []);
 
-  // Rate limit countdown effect'i
   useEffect(() => {
     if (rateLimitCountdown > 0) {
       const timer = setInterval(() => {
         setRateLimitCountdown(prev => {
           const newCount = prev - 1;
           if (newCount <= 0) {
-            // Süre bittiğinde localStorage'dan sil
             localStorage.removeItem('importRateLimit');
             setIsRateLimited(false);
             return 0;

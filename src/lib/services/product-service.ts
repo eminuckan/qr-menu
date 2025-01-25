@@ -6,7 +6,6 @@ export const ProductService = {
     const supabase = createClient();
 
     try {
-      // 1. Ürünü oluştur
       const { data: product, error: productError } = await supabase
         .from("products")
         .insert({
@@ -24,7 +23,6 @@ export const ProductService = {
 
       if (productError) throw productError;
 
-      // 2. Fiyat bilgisini ekle
       const { error: priceError } = await supabase
         .from("product_prices")
         .insert({
@@ -35,7 +33,6 @@ export const ProductService = {
 
       if (priceError) throw priceError;
 
-      // 3. Alerjenleri ekle
       if (data.allergens?.length) {
         const { error: allergenError } = await supabase
           .from("product_allergens")
@@ -49,7 +46,6 @@ export const ProductService = {
         if (allergenError) throw allergenError;
       }
 
-      // 4. Etiketleri ekle
       if (data.tags?.length) {
         const { error: tagError } = await supabase
           .from("product_tags")
@@ -74,7 +70,6 @@ export const ProductService = {
     const supabase = createClient();
 
     try {
-      // 1. Önce ürünün var olduğunu kontrol et
       const { data: existingProduct, error: checkError } = await supabase
         .from("products")
         .select("id")
@@ -85,7 +80,6 @@ export const ProductService = {
         throw new Error("Güncellenecek ürün bulunamadı");
       }
 
-      // 2. Ürün bilgilerini güncelle
       const { error: productError } = await supabase
         .from("products")
         .update({
@@ -99,13 +93,11 @@ export const ProductService = {
 
       if (productError) throw productError;
 
-      // 3. Önce mevcut fiyatı sil
       await supabase
         .from("product_prices")
         .delete()
         .eq('product_id', productId);
 
-      // 4. Yeni fiyat bilgisini ekle
       const { error: priceError } = await supabase
         .from("product_prices")
         .insert({
@@ -116,7 +108,6 @@ export const ProductService = {
 
       if (priceError) throw priceError;
 
-      // 5. Alerjenleri güncelle
       await supabase
         .from("product_allergens")
         .delete()
@@ -135,7 +126,6 @@ export const ProductService = {
         if (allergenError) throw allergenError;
       }
 
-      // 6. Etiketleri güncelle
       await supabase
         .from("product_tags")
         .delete()
@@ -165,12 +155,10 @@ export const ProductService = {
     const supabase = createClient();
 
     try {
-      // ID'lerin geçerli olduğundan emin ol
       if (!productIds.length || !productIds.every(id => typeof id === 'string' && id.length > 0)) {
         throw new Error('Geçersiz ürün ID\'leri');
       }
 
-      // Önce product_images tablosundan fotoğrafları al
       const { data: images, error: fetchError } = await supabase
         .from('product_images')
         .select('image_url')
@@ -178,7 +166,6 @@ export const ProductService = {
 
       if (fetchError) throw fetchError;
 
-      // Storage'dan fotoğrafları sil
       if (images && images.length > 0) {
         const fileNames = images
           .map(img => img.image_url?.split('/').pop())
@@ -193,7 +180,6 @@ export const ProductService = {
         }
       }
 
-      // Ürünleri sil (cascade ile ilişkili kayıtlar da silinecek)
       const { error: deleteError } = await supabase
         .from('products')
         .delete()

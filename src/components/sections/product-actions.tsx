@@ -2,8 +2,8 @@
 import { useToast } from "@/hooks/use-toast";
 import { createClient } from "@/lib/supabase/client";
 import { ProductFormValues } from "@/lib/validations/product";
-import { ProductImage, ProductWithDetails, Unit } from "@/types/database";
-import { useEffect, useState } from "react";
+import { ProductWithDetails, Unit } from "@/types/database";
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../ui/dialog";
 import { Button } from "../ui/button";
 import { ProductForm } from "../forms/product-form";
@@ -27,11 +27,9 @@ export const ProductActions = ({
   const handleSubmit = async (data: ProductFormValues, images?: FormProductImage[]) => {
     setIsSubmitting(true);
     try {
-      // 1. Ürün bilgilerini güncelle
       await ProductService.updateProduct(product.id, data);
 
       if (images?.length) {
-        // 2. Silinecek fotoğrafları bul ve sil
         const existingImageIds = images
           .filter(img => img.isExisting)
           .map(img => img.id!);
@@ -39,7 +37,6 @@ export const ProductActions = ({
         const deletedImages = product.product_images
           .filter(img => !existingImageIds.includes(img.id));
 
-        // Storage'dan ve DB'den sil
         for (const img of deletedImages) {
           const fileName = img.image_url.split('/').pop()!;
           await supabase.storage
@@ -52,7 +49,6 @@ export const ProductActions = ({
             .eq('id', img.id);
         }
 
-        // 3. Yeni fotoğrafları yükle
         const newImages = images.filter(img => !img.isExisting);
         for (const image of newImages) {
           const fileExt = image.file!.name.split('.').pop();
@@ -81,7 +77,6 @@ export const ProductActions = ({
             });
         }
 
-        // 4. Cover durumlarını güncelle
         const updatedImages = images.filter(img => img.isExisting);
         for (const image of updatedImages) {
           await supabase

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Category, Menu } from "@/types/database";
 import { Button } from "@/components/ui/button";
@@ -8,9 +8,6 @@ import { PlusCircle, GripVertical, Eye, Pencil, Trash2 } from "lucide-react";
 import { notFound } from "next/navigation";
 import {
   Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -33,11 +30,9 @@ import {
   sortableKeyboardCoordinates,
   rectSortingStrategy,
 } from "@dnd-kit/sortable";
-import { SortableItem } from "@/components/ui/sortable-item";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { createPortal } from "react-dom";
-import Link from "next/link";
 import PageHeader from "@/components/layout/page-header"
 import {
   Select,
@@ -138,7 +133,6 @@ const CategoryCard = ({
   );
 };
 
-// Türkçe karakterleri normalize eden yardımcı fonksiyon
 const normalizeText = (text: string) => {
   return text
     .toLowerCase()
@@ -188,7 +182,6 @@ export function MenuDetail({ id }: MenuDetailProps) {
         return;
       }
 
-      // Kategorileri ve ürünleri birlikte çekelim
       const { data: categoriesData, error: categoriesError } = await supabase
         .from("categories")
         .select(
@@ -220,7 +213,6 @@ export function MenuDetail({ id }: MenuDetailProps) {
   const onSubmit = async (data: CategoryFormData) => {
     const supabase = createClient();
 
-    // Mevcut en yüksek sort_order değerini bulalım
     const { data: maxSortOrder } = await supabase
       .from("categories")
       .select("sort_order")
@@ -253,7 +245,6 @@ export function MenuDetail({ id }: MenuDetailProps) {
     setIsOpen(false);
     form.reset();
 
-    // Kategorileri yeniden yükle
     const { data: newCategories } = await supabase
       .from("categories")
       .select("*")
@@ -282,11 +273,9 @@ export function MenuDetail({ id }: MenuDetailProps) {
           sort_order: index + 1,
         }));
 
-        // Veritabanı güncellemesini async olarak yap
         const updateDatabase = async () => {
           const supabase = createClient();
 
-          // Her bir güncellemeyi tek tek yapalım
           for (const item of updatedItems) {
             const { error } = await supabase
               .from("categories")
@@ -400,7 +389,6 @@ export function MenuDetail({ id }: MenuDetailProps) {
   };
 
   const filteredCategories = categories.filter((category) => {
-    // Önce kategori durumuna göre filtrele
     const matchesStatus =
       statusFilter === "all"
         ? true
@@ -410,7 +398,6 @@ export function MenuDetail({ id }: MenuDetailProps) {
 
     if (!matchesStatus) return false;
 
-    // Eğer arama terimi varsa, kategori adında ara
     if (searchTerm) {
       const normalizedSearch = normalizeText(searchTerm);
       return normalizeText(category.name).includes(normalizedSearch);

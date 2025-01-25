@@ -2,7 +2,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
-import { Switch } from "@/components/ui/switch";
 import { Trash, GripVertical } from "lucide-react";
 import { ColumnDef, RowSelectionState } from "@tanstack/react-table";
 import type { Product, Unit, ProductWithDetails } from "@/types/database";
@@ -12,11 +11,6 @@ import { useToast } from "@/hooks/use-toast";
 import { DndProvider } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
 import { useDrag, useDrop } from 'react-dnd'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { type ProductFormValues } from "@/lib/validations/product";
-import { ProductForm } from "@/components/forms/product-form";
-import { ProductService } from "@/lib/services/product-service";
-import { useRouter } from "next/router";
 import { ProductActions } from "./product-actions";
 import { ProductPrice } from "./product-price";
 import { ProductStatus } from "./product-status";
@@ -75,14 +69,12 @@ const ProductsTable = ({ products: initialProducts, onDelete, onAdd, onStatusCha
   const { toast } = useToast();
   const supabase = createClient();
 
-  // initialProducts değiştiğinde localProducts'ı güncelle
   useEffect(() => {
     setLocalProducts(initialProducts);
   }, [initialProducts]);
 
   const handleStatusChange = async (productId: string, newStatus: boolean) => {
     try {
-      // Önce local state'i güncelle
       setLocalProducts(current =>
         current.map(product =>
           product.id === productId
@@ -91,7 +83,6 @@ const ProductsTable = ({ products: initialProducts, onDelete, onAdd, onStatusCha
         )
       );
 
-      // Sonra API çağrısı yap
       const { error } = await supabase
         .from("products")
         .update({ is_active: newStatus })
@@ -103,7 +94,6 @@ const ProductsTable = ({ products: initialProducts, onDelete, onAdd, onStatusCha
         onStatusChange(productId, newStatus);
       }
     } catch (error) {
-      // Hata durumunda local state'i geri al
       setLocalProducts(current =>
         current.map(product =>
           product.id === productId
@@ -129,10 +119,8 @@ const ProductsTable = ({ products: initialProducts, onDelete, onAdd, onStatusCha
         updatedProducts.splice(dragIndex, 1);
         updatedProducts.splice(hoverIndex, 0, draggedProduct);
 
-        // Önce UI'ı güncelle
         setLocalProducts(updatedProducts);
 
-        // Tüm sıralamayı tek seferde güncelle
         const { error } = await supabase.rpc('update_products_order', {
           p_product_ids: updatedProducts.map(p => p.id),
           p_category_id: draggedProduct.category_id
@@ -212,7 +200,6 @@ const ProductsTable = ({ products: initialProducts, onDelete, onAdd, onStatusCha
     },
   ];
 
-  // Seçili ID'leri al
   const getSelectedProductIds = () => {
     return Object.keys(rowSelection)
       .filter(index => rowSelection[index])

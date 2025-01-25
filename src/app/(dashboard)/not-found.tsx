@@ -7,7 +7,7 @@ export default function DashboardNotFound() {
       <div className="absolute left-10 bottom-10 flex gap-4">
         <div className="w-16 h-16 bg-black transform rotate-45" />
         <div className="w-16 h-16 bg-black rounded-full" />
-        <div className="w-16 h-16 bg-black" 
+        <div className="w-16 h-16 bg-black"
           style={{ clipPath: "polygon(50% 0%, 0% 100%, 100% 100%)" }} />
         <div className="w-16 h-16 bg-black rounded-[40%]" />
       </div>
@@ -24,8 +24,8 @@ export default function DashboardNotFound() {
         <h1 className="text-6xl md:text-8xl font-bold mb-8 tracking-tighter">
           Bu sayfayı bulamadık.
         </h1>
-        <Link 
-          href="/dashboard" 
+        <Link
+          href="/dashboard"
           className="text-lg border-b-2 border-black pb-1 hover:pb-2 transition-all"
         >
           Ana sayfa ↵

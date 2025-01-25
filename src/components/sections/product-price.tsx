@@ -3,7 +3,6 @@ import { ProductWithDetails } from "@/types/database";
 export const ProductPrice = ({ product }: { product: ProductWithDetails }) => {
   const mainPrice = product.product_prices?.[0];
 
-  // Debug için kontrol edelim
   console.log('mainPrice:', mainPrice);
 
   if (!mainPrice) return <div>-</div>;

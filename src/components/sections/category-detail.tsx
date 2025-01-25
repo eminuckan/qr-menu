@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,43 +13,21 @@ import Image from "next/image";
 import type {
   CategoryWithProducts,
   Unit,
-  AllergenType,
-  ProductTagType,
   ProductWithDetails,
 } from "@/types/database";
-import { AllergenLabels, ProductTagLabels } from "@/types/database";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Plus, X, PlusCircle, Check, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { createClient } from "@/lib/supabase/client";
 import PageHeader from "@/components/layout/page-header";
 import ProductsTable from "@/components/sections/products-table";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { TiptapEditor } from "../ui/tiptap-editor";
 import { FileDropzone } from "@/components/ui/file-dropzone";
-import { MultiSelectInput } from "@/components/ui/multi-select-input";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   productFormSchema,
   type ProductFormValues,
 } from "@/lib/validations/product";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
 import { ProductService } from "@/lib/services/product-service";
 import { ProductForm } from "../forms/product-form";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -143,7 +121,6 @@ const CategoryDetail = ({ id }: { id: string }) => {
   const fetchCategory = async () => {
     setIsLoading(true);
     try {
-      // 1. Önce sadece kategoriyi çekelim
       const { data: category, error: categoryError } = await supabase
         .from("categories")
         .select("*")
@@ -155,7 +132,6 @@ const CategoryDetail = ({ id }: { id: string }) => {
         throw categoryError;
       }
 
-      // 2. Sonra ürünleri ve tüm ilişkili verileri çekelim
       const { data: products, error: productsError } = await supabase
         .from("products")
         .select(`
@@ -191,9 +167,6 @@ const CategoryDetail = ({ id }: { id: string }) => {
         console.error("Products fetch error:", productsError);
         throw productsError;
       }
-
-      // Debug için veriyi kontrol edelim
-      console.log("Products data:", JSON.stringify(products?.[0]?.product_prices?.[0], null, 2));
 
       const categoryWithProducts = {
         ...category,
@@ -286,7 +259,7 @@ const CategoryDetail = ({ id }: { id: string }) => {
       });
 
       await fetchCategory();
-      return result; // Oluşturulan ürünü dön
+      return result;
     } catch (error) {
       console.error('Ürün ekleme hatası:', error);
       toast({

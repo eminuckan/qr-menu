@@ -5,7 +5,6 @@ export const MenuService = {
         const supabase = createClient();
 
         try {
-            // 1. Menüye ait kategorileri al
             const { data: categories, error: categoriesError } = await supabase
                 .from('categories')
                 .select('id, cover_image')
@@ -14,7 +13,6 @@ export const MenuService = {
             if (categoriesError) throw categoriesError;
 
             if (categories?.length) {
-                // 2. Her kategoriye ait ürünleri al
                 const { data: products, error: productsError } = await supabase
                     .from('products')
                     .select('id')
@@ -23,7 +21,6 @@ export const MenuService = {
                 if (productsError) throw productsError;
 
                 if (products?.length) {
-                    // 3. Ürünlerin fotoğraflarını al
                     const { data: productImages, error: imagesError } = await supabase
                         .from('product_images')
                         .select('image_url')
@@ -31,7 +28,6 @@ export const MenuService = {
 
                     if (imagesError) throw imagesError;
 
-                    // 4. Storage'dan ürün fotoğraflarını sil
                     if (productImages?.length) {
                         const fileNames = productImages
                             .map(img => img.image_url?.split('/').pop())
@@ -47,7 +43,7 @@ export const MenuService = {
                     }
                 }
 
-                // 5. Kategori fotoğraflarını sil
+
                 const categoryImages = categories
                     .map(cat => cat.cover_image?.split('/').pop())
                     .filter(Boolean) as string[];
@@ -61,7 +57,6 @@ export const MenuService = {
                 }
             }
 
-            // 6. Menüyü sil (cascade ile ilişkili tüm veriler silinecek)
             const { error: deleteError } = await supabase
                 .from('menus')
                 .delete()
