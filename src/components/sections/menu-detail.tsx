@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Category, Menu } from "@/types/database";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, GripVertical, Eye, Pencil } from "lucide-react";
+import { PlusCircle, GripVertical, Eye, Pencil, Trash2 } from "lucide-react";
 import { notFound } from "next/navigation";
 import {
   Dialog,
@@ -38,6 +38,17 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import PageHeader from "@/components/layout/page-header"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { MenuService } from "@/lib/services/menu-service";
+import { useRouter } from "next/navigation";
 
 interface MenuDetailProps {
   id: string;
@@ -94,7 +105,7 @@ const CategoryCard = ({
               </div>
               <h3 className="font-medium truncate">{category.name}</h3>
               <p className="text-sm text-muted-foreground mb-2">
-                Toplam Ürün: {category.product_count || 0}
+                Toplam Ürün: {category.products?.filter(product => product.is_active).length || 0}
               </p>
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
@@ -109,15 +120,15 @@ const CategoryCard = ({
                   </span>
                 </div>
                 <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-2"
-                      as="link"
-                      href={`/dashboard/menu/category/${category.id}`}
-                    >
-                      <Eye className="h-4 w-4" />
-                      Detaylar
-                    </Button>
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  as="link"
+                  href={`/dashboard/menu/category/${category.id}`}
+                >
+                  <Eye className="h-4 w-4" />
+                  Detaylar
+                </Button>
               </div>
             </div>
           </div>
@@ -152,8 +163,7 @@ export function MenuDetail({ id }: MenuDetailProps) {
   const form = useForm<CategoryFormData>();
   const { toast } = useToast();
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [isEditingName, setIsEditingName] = useState(false);
-  const [editedName, setEditedName] = useState("");
+  const router = useRouter();
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -339,14 +349,8 @@ export function MenuDetail({ id }: MenuDetailProps) {
     });
   };
 
-  const handleNameEdit = async () => {
-    if (!isEditingName) {
-      setEditedName(menu?.name || "");
-      setIsEditingName(true);
-      return;
-    }
-
-    if (!editedName.trim()) {
+  const handleNameChange = async (newName: string) => {
+    if (!newName.trim()) {
       toast({
         variant: "destructive",
         title: "Hata",
@@ -358,7 +362,7 @@ export function MenuDetail({ id }: MenuDetailProps) {
     const supabase = createClient();
     const { error } = await supabase
       .from("menus")
-      .update({ name: editedName.trim() })
+      .update({ name: newName.trim() })
       .eq("id", id);
 
     if (error) {
@@ -370,12 +374,29 @@ export function MenuDetail({ id }: MenuDetailProps) {
       return;
     }
 
-    setMenu((prev) => (prev ? { ...prev, name: editedName.trim() } : null));
-    setIsEditingName(false);
+    setMenu((prev) => (prev ? { ...prev, name: newName.trim() } : null));
     toast({
       title: "Başarılı",
       description: "Menü adı güncellendi",
     });
+  };
+
+  const handleDelete = async () => {
+    try {
+      await MenuService.deleteMenu(id);
+      toast({
+        title: "Başarılı",
+        description: "Menü ve ilişkili tüm veriler başarıyla silindi",
+      });
+      router.push('/dashboard/menu');
+    } catch (error) {
+      console.error('Menü silme hatası:', error);
+      toast({
+        variant: "destructive",
+        title: "Hata",
+        description: error instanceof Error ? error.message : "Menü silinirken bir hata oluştu",
+      });
+    }
   };
 
   const filteredCategories = categories.filter((category) => {
@@ -384,18 +405,15 @@ export function MenuDetail({ id }: MenuDetailProps) {
       statusFilter === "all"
         ? true
         : statusFilter === "active"
-        ? category.is_active
-        : !category.is_active;
+          ? category.is_active
+          : !category.is_active;
 
     if (!matchesStatus) return false;
 
-    // Eğer arama terimi varsa, kategori içindeki ürünlerde ara
+    // Eğer arama terimi varsa, kategori adında ara
     if (searchTerm) {
       const normalizedSearch = normalizeText(searchTerm);
-      const hasMatchingProduct = category.products?.some((product) =>
-        normalizeText(product.name).includes(normalizedSearch)
-      );
-      return hasMatchingProduct;
+      return normalizeText(category.name).includes(normalizedSearch);
     }
 
     return true;
@@ -412,103 +430,85 @@ export function MenuDetail({ id }: MenuDetailProps) {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center gap-2">
-          {isEditingName ? (
-            <div className="flex items-center gap-2">
-              <Input
-                value={editedName}
-                onChange={(e) => setEditedName(e.target.value)}
-                className="text-2xl font-bold h-auto py-1 w-[300px]"
-                autoFocus
-                onBlur={() => setIsEditingName(false)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleNameEdit();
-                  if (e.key === "Escape") setIsEditingName(false);
-                }}
-              />
-              <Button
-                onClick={handleNameEdit}
-                size="sm"
-                onMouseDown={(e) => e.preventDefault()}
-              >
-                Kaydet
+        <PageHeader
+          title={menu?.name || ""}
+          isEditable
+          onTitleChange={handleNameChange}
+          backPath="/dashboard/menu"
+        />
+        <div className="flex items-center gap-3">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="sm">
+                <Trash2 className="h-4 w-4 mr-2" />
+                Menüyü Sil
               </Button>
-            </div>
-          ) : (
-            <>
-              <h1 className="text-2xl font-bold">{menu?.name}</h1>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="p-1 h-auto"
-                onClick={() => {
-                  setEditedName(menu?.name || "");
-                  setIsEditingName(true);
-                }}
-              >
-                <Pencil className="w-4 h-4" />
-              </Button>
-            </>
-          )}
-        </div>
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <PlusCircle className="w-4 h-4 mr-2" />
-              Kategori Ekle
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Yeni Kategori Ekle</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <div className="space-y-2">
-                <label
-                  htmlFor="name"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  Kategori Adı
-                </label>
-                <Input
-                  id="name"
-                  {...form.register("name", { required: true })}
-                  placeholder="Örn: İçecekler"
-                />
-                {form.formState.errors.name && (
-                  <span className="text-sm text-destructive">
-                    Bu alan zorunludur
-                  </span>
-                )}
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Menüyü Sil</AlertDialogTitle>
+              </AlertDialogHeader>
+              <div className="py-4">
+                <p className="text-sm text-muted-foreground mb-4">
+                  Bu menüyü silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
+                </p>
+                <p className="text-sm text-muted-foreground mb-2">
+                  Menü ile birlikte aşağıdaki veriler de silinecektir:
+                </p>
+                <ul className="list-disc list-inside text-sm text-muted-foreground">
+                  <li>Tüm kategoriler</li>
+                  <li>Kategorilere ait fotoğraflar</li>
+                  <li>Tüm ürünler</li>
+                  <li>Ürün fiyatları</li>
+                  <li>Ürün fotoğrafları</li>
+                  <li>Ürün etiketleri</li>
+                  <li>Ürün alerjenleri</li>
+                </ul>
               </div>
-              <Button type="submit" className="w-full">
+              <AlertDialogFooter>
+                <AlertDialogCancel>İptal</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDelete}
+                  className="bg-destructive hover:bg-destructive/90"
+                >
+                  Sil
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <PlusCircle className="w-4 h-4 mr-2" />
                 Kategori Ekle
               </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+          </Dialog>
+        </div>
       </div>
 
       <div className="flex gap-4 mb-6">
         <div className="flex-1">
           <Input
-            placeholder="Ürün ara..."
+            placeholder="Kategori ara..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full"
           />
         </div>
-        <select
-          className="px-3 py-2 border rounded-md"
+        <Select
           value={statusFilter}
-          onChange={(e) =>
-            setStatusFilter(e.target.value as "all" | "active" | "inactive")
-          }
+          onValueChange={(value) => setStatusFilter(value as "all" | "active" | "inactive")}
         >
-          <option value="all">Tüm Kategoriler</option>
-          <option value="active">Aktif Kategoriler</option>
-          <option value="inactive">Pasif Kategoriler</option>
-        </select>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filtrele" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tüm Kategoriler</SelectItem>
+            <SelectItem value="active">Aktif Kategoriler</SelectItem>
+            <SelectItem value="inactive">Pasif Kategoriler</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="space-y-4">

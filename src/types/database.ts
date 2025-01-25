@@ -1,159 +1,178 @@
 // Temel timestamp alanları için interface
 interface Timestamps {
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
+}
+
+// Temel ortak alanlar için interface
+interface BaseEntity extends Timestamps {
+  id: string;
+}
+
+// Sıralama ve aktiflik durumu için interface
+interface Sortable {
+  sort_order: number;
+  is_active: boolean;
+}
+
+// Renk ve görsel için interface
+interface Appearance {
+  color?: string | null;
+  cover_image?: string | null;
 }
 
 // Menu tablosu için type
-export type Menu = {
-  id: string;
+export interface Menu extends BaseEntity, Sortable, Appearance {
   name: string;
-  is_active: boolean;
-  cover_image: string | null;
-  color: string | null;
-  sort_order: number;
-} & Timestamps;
+  categories?: Category[];
+}
 
 // Category tablosu için type
-export type Category = {
-  id: string;
+export interface Category extends BaseEntity, Sortable, Appearance {
   menu_id: string;
   name: string;
-  is_active: boolean;
-  color: string | null;
-  cover_image: string | null;
-  sort_order: number;
+  products?: Product[];
   product_count?: number;
-  products?: {
-    id: string;
-    name: string;
-    is_active: boolean;
-  }[];
-} & Timestamps;
+}
 
 // Product tablosu için type
-export type Product = {
-  id: string;
+export interface Product extends BaseEntity, Sortable {
   category_id: string;
   name: string;
-  description: string | null;
-  kdv_rate: number | null;
-  color: string | null;
-  is_active: boolean;
-  sort_order: number;
-  calories: number | null;
-  preparing_time: number | null;
-} & Timestamps;
+  description?: string | null;
+  color?: string | null;
+  kdv_rate?: number | null;
+  calories?: number | null;
+  preparing_time?: number | null;
+}
 
 // Unit tablosu için type
-export type Unit = {
-  id: string;
+export interface Unit extends BaseEntity {
   name: string;
   normalized_name: string;
-} & Timestamps;
+}
 
 // ProductPrice tablosu için type
-export type ProductPrice = {
-  id: string;
+export interface ProductPrice extends BaseEntity {
   product_id: string;
   unit_id: string;
+  units?: Unit;
   price: number;
-  discounted_price: number | null;
-} & Timestamps;
+  discounted_price?: number | null;
+}
 
 // ProductImage tablosu için type
-export type ProductImage = {
-  id: string;
+export interface ProductImage extends BaseEntity {
   product_id: string;
-  image_url: string | null;
+  image_url?: string | null;
   is_cover: boolean;
   sort_order: number;
-};
+  file?: File;
+  preview?: string;
+  isExisting?: boolean;
+}
 
 // Alerjen enum tipi
-export enum AllergenType {
-  GLUTEN = "Gluten",
-  SHELLFISH = "Kabuklu Deniz Ürünü",
-  FISH = "Balık",
-  EGGS = "Yumurta",
-  DAIRY = "Süt Ürünü",
-  NUTS = "Kuruyemiş",
-  PEANUTS = "Yer Fıstığı",
-  WHEAT = "Buğday",
-  SULFUR_DIOXIDE = "Kükürt Dioksit",
-  MUSTARD = "Hardal",
-  SESAME = "Susam",
-  SOY = "Soya",
-  LUPIN = "Acı Bakla",
-  CELERY = "Kereviz",
-}
+export type AllergenType =
+  | "gluten"
+  | "shellfish"
+  | "fish"
+  | "eggs"
+  | "dairy"
+  | "nuts"
+  | "peanuts"
+  | "wheat"
+  | "sulfur_dioxide"
+  | "mustard"
+  | "sesame"
+  | "soy"
+  | "lupin"
+  | "celery";
 
 // Görünen isimler için alerjen mapping
 export const AllergenLabels: Record<AllergenType, string> = {
-  [AllergenType.GLUTEN]: "Gluten",
-  [AllergenType.SHELLFISH]: "Kabuklu Deniz Ürünü",
-  [AllergenType.FISH]: "Balık",
-  [AllergenType.EGGS]: "Yumurta",
-  [AllergenType.DAIRY]: "Süt Ürünü",
-  [AllergenType.NUTS]: "Kuruyemiş",
-  [AllergenType.PEANUTS]: "Yer Fıstığı",
-  [AllergenType.WHEAT]: "Buğday",
-  [AllergenType.SULFUR_DIOXIDE]: "Kükürt Dioksit",
-  [AllergenType.MUSTARD]: "Hardal",
-  [AllergenType.SESAME]: "Susam",
-  [AllergenType.SOY]: "Soya",
-  [AllergenType.LUPIN]: "Acı Bakla",
-  [AllergenType.CELERY]: "Kereviz",
+  gluten: "Gluten",
+  shellfish: "Kabuklu Deniz Ürünü",
+  fish: "Balık",
+  eggs: "Yumurta",
+  dairy: "Süt Ürünü",
+  nuts: "Kuruyemiş",
+  peanuts: "Yer Fıstığı",
+  wheat: "Buğday",
+  sulfur_dioxide: "Kükürt Dioksit",
+  mustard: "Hardal",
+  sesame: "Susam",
+  soy: "Soya",
+  lupin: "Acı Bakla",
+  celery: "Kereviz",
 };
 
 // ProductAllergen tablosu için type
-export type ProductAllergen = {
-  id: string;
+export interface ProductAllergen extends BaseEntity {
   product_id: string;
   allergen: AllergenType;
-} & Timestamps;
+}
 
 // Ürün etiketi enum tipi
-export enum ProductTagType {
-  NEW = "new",
-  SIGNATURE = "signature",
-  CHEF_RECOMMENDATION = "chef_recommendation",
-  POPULAR = "popular",
-  VEGAN = "vegan",
-  SPECIAL = "special",
-}
+export type ProductTagType =
+  | "new"
+  | "signature"
+  | "chef_recommendation"
+  | "popular"
+  | "vegan"
+  | "special";
 
 // Ürün etiketleri için Türkçe karşılıklar
 export const ProductTagLabels: Record<ProductTagType, string> = {
-  [ProductTagType.NEW]: "Yeni",
-  [ProductTagType.SIGNATURE]: "İmza Ürün",
-  [ProductTagType.CHEF_RECOMMENDATION]: "Şefin Önerisi",
-  [ProductTagType.POPULAR]: "Popüler",
-  [ProductTagType.VEGAN]: "Vegan",
-  [ProductTagType.SPECIAL]: "Özel",
+  new: "Yeni",
+  signature: "İmza Ürün",
+  chef_recommendation: "Şefin Önerisi",
+  popular: "Popüler",
+  vegan: "Vegan",
+  special: "Özel",
 };
 
 // ProductTag tablosu için type
-export type ProductTag = {
-  id: string;
+export interface ProductTag extends BaseEntity {
   product_id: string;
   tag_type: ProductTagType;
-};
+}
 
 // İlişkili veri tipleri
-export type ProductWithDetails = Product & {
-  category: Category;
-  prices: ProductPrice[];
-  images: ProductImage[];
-  allergens: ProductAllergen[];
-  tags: ProductTag[];
-  unit: Unit;
-};
+export interface ProductWithDetails extends Product {
+  product_prices: ProductPrice[];
+  product_allergens: { allergen: AllergenType }[];
+  product_tags: { tag_type: ProductTagType }[];
+  product_images: {
+    id: string;
+    image_url: string;
+    is_cover: boolean;
+    sort_order: number;
+  }[];
+}
 
-export type CategoryWithProducts = Category & {
+export interface CategoryWithProducts extends Category {
   products: ProductWithDetails[];
-};
+}
 
-export type MenuWithCategories = Menu & {
+export interface MenuWithCategories extends Menu {
   categories: CategoryWithProducts[];
-};
+}
+
+// Form değerleri için type
+export interface ProductFormValues {
+  name: string;
+  description?: string;
+  color?: string;
+  calories?: number;
+  preparing_time?: number;
+  allergens: AllergenType[];
+  tags: ProductTagType[];
+  unit_id: string;
+  price: number;
+}
+
+// DTO tipleri
+export interface UnitCreateDTO {
+  name: string;
+}

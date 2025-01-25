@@ -43,6 +43,13 @@ interface DataTableProps<TData, TValue> {
   data: TData[]
   searchKey?: string
   onRowSelectionChange?: (value: RowSelectionState) => void
+  components?: {
+    row?: React.ComponentType<{
+      children: React.ReactNode
+      row: Row<TData>
+      key: string
+    }>
+  }
 }
 
 const columnNames: Record<string, string> = {
@@ -58,6 +65,7 @@ export function DataTable<TData, TValue>({
   data,
   searchKey,
   onRowSelectionChange,
+  components,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
@@ -117,7 +125,7 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className="w-full">
-      <div className="flex items-center py-4 px-4">
+      <div className="flex items-center py-4">
         {searchKey && (
           <Input
             placeholder="Ara..."
@@ -161,7 +169,7 @@ export function DataTable<TData, TValue>({
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id} className="px-4">
+                  <TableHead key={header.id}>
                     {header.isPlaceholder
                       ? null
                       : flexRender(
@@ -175,21 +183,21 @@ export function DataTable<TData, TValue>({
           </TableHeader>
           <TableBody>
             {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="px-4">
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
+              table.getRowModel().rows.map((row) => {
+                const RowComponent = components?.row || TableRow
+                return (
+                  <RowComponent
+                    key={row.id}
+                    row={row}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </RowComponent>
+                )
+              })
             ) : (
               <TableRow>
                 <TableCell
@@ -203,7 +211,7 @@ export function DataTable<TData, TValue>({
           </TableBody>
         </Table>
       </div>
-      <div className="flex items-center justify-end space-x-2 py-4 px-4">
+      <div className="flex items-center justify-end space-x-2 py-4">
         <div className="flex-1 text-sm text-muted-foreground">
           {table.getFilteredSelectedRowModel().rows.length} / {" "}
           {table.getFilteredRowModel().rows.length} satır seçildi.
