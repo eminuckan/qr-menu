@@ -1,0 +1,428 @@
+.phone-container {
+    --phone-width: 294px;
+    --phone-height: 600px;
+    --border-radius: 50px;
+    --border-width: 3px;
+}
+
+.phone {
+    width: var(--phone-width);
+    height: var(--phone-height);
+    background: black;
+    border-radius: var(--border-radius);
+    position: relative;
+    border: var(--border-width) solid #bbb5b3;
+    box-shadow: 0 0 0 1px #4a4947;
+}
+
+.buttons {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.buttons .left,
+.buttons .right {
+    position: absolute;
+    width: 3.5px;
+}
+
+.button {
+    background: linear-gradient(90deg, #888, #555);
+    border-top: 2px solid #eae0d9;
+    border-bottom: 2px solid #eae0d9;
+}
+
+.screen {
+    position: absolute;
+    inset: 12px;
+    border-radius: 40px;
+    overflow: hidden;
+    background: black;
+}
+
+.notch {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90px;
+    height: 25px;
+    background: black;
+    border-radius: 20px;
+    z-index: 10;
+}
+
+.camera {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 15px;
+    height: 15px;
+    background: #111;
+    border-radius: 50%;
+}
+
+.content {
+    position: relative;
+    z-index: 1;
+    height: 100%;
+    padding: 40px 20px;
+}
+
+.px {
+    position: relative;
+    padding: 6% 7%;
+}
+
+.px__body {
+    position: absolute;
+    top: 0;
+    right: 1%;
+    bottom: 0;
+    left: 1%;
+    background: linear-gradient(to top, #e5e5e5 0%, #f7f7f9 10%, #eeeef0 90%);
+    border-radius: 14%/7%;
+    box-shadow: inset 0 0 3px 1px #000;
+}
+
+.px__body:before {
+    content: '';
+    position: absolute;
+    top: .7%;
+    right: 1.4%;
+    bottom: .7%;
+    left: 1.4%;
+    background-color: #000;
+    border-radius: 13%/7%;
+    box-shadow: 0 0 3px #000;
+}
+
+.px__body:after {
+    content: '';
+    position: absolute;
+    top: 1%;
+    right: 2.3%;
+    bottom: 1%;
+    left: 2.3%;
+    background-color: #000;
+    box-shadow: inset 0 0 10px 2px #fff;
+    border-radius: 13%/6.5%;
+}
+
+.px__body__cut {
+    position: absolute;
+    z-index: 2;
+    top: 3%;
+    left: 50%;
+    width: 50%;
+    height: 3.5%;
+    background-color: #000;
+    border-radius: 0 0 10% 10%/80%;
+    transform: translate3d(-50%, 0, 0);
+}
+
+.px__body__speaker {
+    position: absolute;
+    z-index: 2;
+    top: 4%;
+    left: 50%;
+    width: 12%;
+    height: .8%;
+    background-color: #222;
+    border-radius: 5px;
+    transform: translate(-50%, -50%);
+}
+
+.px__body__sensor {
+    position: absolute;
+    z-index: 2;
+    top: 4%;
+    left: 61%;
+    width: 2.2%;
+    height: 1.1%;
+    border-radius: 50%;
+    background-color: #2a4a73;
+    box-shadow: inset 0 0 2px 1px #000;
+    transform: translate(-50%, -50%);
+}
+
+.px__body__mute,
+.px__body__up,
+.px__body__down,
+.px__body__right {
+    position: absolute;
+    background-color: #b5b8ba;
+    box-shadow: inset 0 5px 5px -3px rgba(0, 0, 0, .5), inset 0 -5px 5px -3px rgba(0, 0, 0, .5);
+    transform: translate(0, -50%);
+}
+
+.px__body__mute {
+    top: 14.7%;
+    left: -.7%;
+    width: .7%;
+    height: 4%;
+    border-radius: 1px 0 0 1px;
+}
+
+.px__body__up {
+    top: 25%;
+    left: -1%;
+    width: 1%;
+    height: 7.5%;
+    border-radius: 2px 0 0 2px;
+}
+
+.px__body__down {
+    top: 34%;
+    left: -1%;
+    width: 1%;
+    height: 7.5%;
+    border-radius: 2px 0 0 2px;
+}
+
+.px__body__right {
+    top: 25%;
+    right: -1%;
+    width: 1%;
+    height: 7.5%;
+    border-radius: 0 2px 2px 0;
+}
+
+.px__screen {
+    position: relative;
+    z-index: 1;
+}
+
+.px__screen__ {
+    position: relative;
+    padding-bottom: 218%;
+    background-color: #888;
+    border-radius: 10%/5%;
+    box-shadow: 0 0 10px #000;
+}
+
+.px__screen__frame {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    overflow: hidden;
+    border-radius: inherit;
+    background-size: cover;
+    background-position: center center;
+}
+
+.iphone-x {
+    position: relative;
+    margin: 40px auto;
+    width: 360px;
+    height: 780px;
+    background-color: #1f1f1f;
+    border-radius: 40px;
+    box-shadow: 0px 0px 0px 11px #1f1f1f, 0px 0px 0px 13px #191919, 0px 0px 0px 20px #111;
+    overflow: hidden;
+}
+
+/* Üst çentik */
+.iphone-x:before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    top: 0px;
+    width: 56%;
+    height: 30px;
+    background-color: #1f1f1f;
+    border-radius: 0px 0px 40px 40px;
+    z-index: 2;
+}
+
+/* Alt çizgi */
+.iphone-x:after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 7px;
+    width: 140px;
+    height: 4px;
+    background-color: #f2f2f2;
+    border-radius: 10px;
+    z-index: 2;
+}
+
+/* Hoparlör */
+.iphone-x i {
+    position: absolute;
+    top: 0px;
+    left: 50%;
+    transform: translate(-50%, 6px);
+    height: 8px;
+    width: 15%;
+    background-color: #101010;
+    border-radius: 8px;
+    box-shadow: inset 0px -3px 3px 0px rgba(256, 256, 256, 0.2);
+    z-index: 3;
+}
+
+/* Kamera */
+.iphone-x b {
+    position: absolute;
+    left: 10%;
+    top: 0px;
+    transform: translate(180px, 4px);
+    width: 12px;
+    height: 12px;
+    background-color: #101010;
+    border-radius: 12px;
+    box-shadow: inset 0px -3px 2px 0px rgba(256, 256, 256, 0.2);
+    z-index: 3;
+}
+
+.iphone-x b:after {
+    content: '';
+    position: absolute;
+    background-color: #2d4d76;
+    width: 6px;
+    height: 6px;
+    top: 3px;
+    left: 3px;
+    display: block;
+    border-radius: 4px;
+    box-shadow: inset 0px -2px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Ekran */
+.screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
+    border-radius: 40px;
+    z-index: 1;
+}
+
+/* Ana iPhone container */
+.iphone14 {
+    position: relative;
+    width: 300px;
+    height: 600px;
+    margin: 40px auto;
+    padding: 15px;
+}
+
+/* iPhone çerçevesi */
+.iphone14-frame {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: #1f1f1f;
+    border-radius: 40px;
+    overflow: hidden;
+    box-shadow:
+        inset 0 0 5px rgba(255, 255, 255, 0.1),
+        0 0 0 2px #222,
+        0 0 0 7px #000,
+        0 0 0 8px #222,
+        0 20px 50px -20px rgba(0, 0, 0, 0.5);
+}
+
+/* Dynamic Island */
+.dynamic-island {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 35px;
+    background: #000;
+    border-radius: 20px;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+/* Kamera */
+.camera {
+    width: 12px;
+    height: 12px;
+    background: #1a1a1a;
+    border-radius: 50%;
+    position: relative;
+}
+
+.camera::after {
+    content: '';
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    top: 3px;
+    left: 3px;
+    background: #2d4d76;
+    border-radius: 50%;
+    box-shadow: inset 0 -1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Hoparlör */
+.speaker {
+    width: 40px;
+    height: 6px;
+    background: #1a1a1a;
+    border-radius: 3px;
+}
+
+/* Ekran */
+.screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 40px;
+    overflow: hidden;
+    background: #000;
+}
+
+/* Alt çizgi */
+.iphone14-frame::after {
+    content: '';
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 2px;
+    z-index: 2;
+}
+
+/* Yan tuşlar */
+.iphone14::before {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 100px;
+    width: 3px;
+    height: 30px;
+    background: #000;
+    border-radius: 2px 0 0 2px;
+}
+
+.iphone14::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 100px;
+    width: 3px;
+    height: 70px;
+    background: #000;
+    border-radius: 0 2px 2px 0;
+}

@@ -173,49 +173,15 @@ export function ProductForm({
             control={form.control}
             name="color"
             render={({ field }) => (
-              <FormItem className="flex flex-col items-start gap-2">
-                <FormLabel className="text-sm font-medium">
-                  Ürün rengi
-                </FormLabel>
+              <FormItem className="space-y-2">
+                <FormLabel className="text-sm font-medium">Ürün rengi</FormLabel>
                 <FormControl>
-                  <div className="flex flex-wrap gap-3 items-center">
-                    <RadioGroup
-                      onValueChange={field.onChange}
-                      value={field.value}
-                      className="flex flex-wrap gap-3"
-                    >
-                      {[
-                        { value: "#FFFFFF", label: "Beyaz", bg: "bg-white" },
-                        { value: "#FCA5A5", label: "Kırmızı", bg: "bg-red-300" },
-                        { value: "#93C5FD", label: "Mavi", bg: "bg-blue-300" },
-                        { value: "#86EFAC", label: "Yeşil", bg: "bg-green-300" },
-                        { value: "#FDE047", label: "Sarı", bg: "bg-yellow-300" },
-                        { value: "#D8B4FE", label: "Mor", bg: "bg-purple-300" },
-                        { value: "#FDA4AF", label: "Pembe", bg: "bg-pink-300" },
-                        { value: "#FDBA74", label: "Turuncu", bg: "bg-orange-300" },
-                      ].map((color) => (
-                        <div key={color.value} className="relative group">
-                          <RadioGroupItem
-                            value={color.value}
-                            id={color.value}
-                            className="peer sr-only"
-                          />
-                          <label
-                            htmlFor={color.value}
-                            className={`w-6 h-6 rounded-full ${color.bg} block ring-2 ring-offset-2 ring-transparent peer-data-[state=checked]:ring-black cursor-pointer transition-all duration-200 ease-in-out ${color.value === '#FFFFFF' ? 'border border-gray-200' : ''}`}
-                          />
-                          <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                            {color.label}
-                          </span>
-                        </div>
-                      ))}
-                    </RadioGroup>
-                    <ColorPicker
-                      color={field.value || '#000000'}
-                      onChange={field.onChange}
-                      className="w-6 h-6"
-                    />
-                  </div>
+                  <ColorPicker
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    name={field.name}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -265,10 +231,10 @@ export function ProductForm({
                       value: key,
                       label,
                     }))}
-                    value={field.value.map(allergen => ({
+                    value={field.value?.map(allergen => ({
                       value: allergen,
                       label: AllergenLabels[allergen as AllergenType],
-                    }))}
+                    })) || []}
                     onChange={(newValue) => field.onChange(newValue.map(v => v.value))}
                     placeholder="Alerjen seçin"
                   />
@@ -289,10 +255,10 @@ export function ProductForm({
                       value: key,
                       label,
                     }))}
-                    value={field.value.map(tag => ({
+                    value={field.value?.map(tag => ({
                       value: tag,
                       label: ProductTagLabels[tag as ProductTagType],
-                    }))}
+                    })) || []}
                     onChange={(newValue) => field.onChange(newValue.map(v => v.value))}
                     placeholder="Etiket seçin"
                   />
@@ -337,12 +303,13 @@ export function ProductForm({
                     <Input
                       type="number"
                       min="0"
-                      step="10"
+                      step="0.01"
                       placeholder="0"
                       className="pr-16"
                       {...field}
+                      value={field.value === undefined || field.value === 0 ? "" : field.value}
                       onChange={(e) => {
-                        const value = Math.max(0, Number(e.target.value));
+                        const value = e.target.value === "" ? 0 : Number(e.target.value);
                         field.onChange(value);
                       }}
                     />

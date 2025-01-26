@@ -9,6 +9,10 @@ import { notFound } from "next/navigation";
 import {
   Dialog,
   DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useForm } from "react-hook-form";
@@ -41,9 +45,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { MenuService } from "@/lib/services/menu-service";
 import { useRouter } from "next/navigation";
+import { Label } from "@/components/ui/label";
+import Link from "next/link";
 
 interface MenuDetailProps {
   id: string;
@@ -80,9 +86,9 @@ const CategoryCard = ({
   return (
     <div ref={setNodeRef} style={style} {...attributes}>
       <Card className="bg-white">
-        <CardContent className="p-4">
-          <div className="flex gap-4">
-            <div className="flex-shrink-0 w-24 h-24 bg-gray-100 rounded-lg overflow-hidden">
+        <CardContent className="p-3 md:p-4">
+          <div className="flex gap-3">
+            <div className="flex-shrink-0 w-16 h-16 md:w-24 md:h-24 bg-gray-100 rounded-lg overflow-hidden">
               <img
                 src={category.cover_image || "/no-image.jpg"}
                 alt={category.name}
@@ -90,39 +96,40 @@ const CategoryCard = ({
               />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2 mb-1 md:mb-2">
                 <div {...listeners} className="cursor-grab">
-                  <GripVertical className="h-5 w-5 text-gray-400" />
+                  <GripVertical className="h-4 w-4 md:h-5 md:w-5 text-gray-400" />
                 </div>
-                <span className="text-gray-400 font-medium text-sm">
+                <span className="text-xs md:text-sm text-gray-400 font-medium">
                   #{String(index + 1).padStart(2, "0")}
                 </span>
               </div>
-              <h3 className="font-medium truncate">{category.name}</h3>
-              <p className="text-sm text-muted-foreground mb-2">
+              <h3 className="text-sm md:text-base font-medium truncate">{category.name}</h3>
+              <p className="text-xs md:text-sm text-muted-foreground mb-1 md:mb-2">
                 Toplam Ürün: {category.products?.filter(product => product.is_active).length || 0}
               </p>
               <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 md:gap-2">
                   <Switch
+                    className="scale-75 md:scale-100"
                     checked={category.is_active}
                     onCheckedChange={(checked) =>
                       onActiveChange(category.id, checked)
                     }
                   />
-                  <span className="text-sm font-medium text-muted-foreground">
+                  <span className="text-xs md:text-sm font-medium text-muted-foreground">
                     {category.is_active ? "Aktif" : "Pasif"}
                   </span>
                 </div>
                 <Button
                   variant="outline"
                   size="sm"
-                  className="gap-2"
+                  className="gap-1 md:gap-2 h-8 md:h-9"
                   as="link"
                   href={`/dashboard/menu/category/${category.id}`}
                 >
-                  <Eye className="h-4 w-4" />
-                  Detaylar
+                  <Eye className="h-3 w-3 md:h-4 md:w-4" />
+                  <span className="text-xs md:text-sm">Detaylar</span>
                 </Button>
               </div>
             </div>
@@ -415,43 +422,49 @@ export function MenuDetail({ id }: MenuDetailProps) {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
+    <div className="p-4 md:p-6">
+      <div className="flex flex-wrap gap-3 justify-between items-center mb-4 md:mb-6">
         <PageHeader
           title={menu?.name || ""}
           isEditable
           onTitleChange={handleNameChange}
           backPath="/dashboard/menu"
         />
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="destructive" size="sm">
-                <Trash2 className="h-4 w-4 mr-2" />
-                Menüyü Sil
+              <Button variant="destructive">
+                <Trash2 className="h-4 w-4 sm:mr-2" />
+                <span>Menüyü Sil</span>
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Menüyü Sil</AlertDialogTitle>
               </AlertDialogHeader>
-              <div className="py-4">
-                <p className="text-sm text-muted-foreground mb-4">
-                  Bu menüyü silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
-                </p>
-                <p className="text-sm text-muted-foreground mb-2">
-                  Menü ile birlikte aşağıdaki veriler de silinecektir:
-                </p>
-                <ul className="list-disc list-inside text-sm text-muted-foreground">
-                  <li>Tüm kategoriler</li>
-                  <li>Kategorilere ait fotoğraflar</li>
-                  <li>Tüm ürünler</li>
-                  <li>Ürün fiyatları</li>
-                  <li>Ürün fotoğrafları</li>
-                  <li>Ürün etiketleri</li>
-                  <li>Ürün alerjenleri</li>
-                </ul>
+
+              <div className="grid gap-4 py-4">
+                <div className="text-sm text-muted-foreground">
+                  <span className="font-medium text-destructive block mb-4">
+                    Bu menüyü silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
+                  </span>
+
+                  <span className="block mb-2">
+                    Menü ile birlikte aşağıdaki veriler de silinecektir:
+                  </span>
+
+                  <ul className="list-disc pl-4 space-y-1">
+                    <li>Tüm kategoriler</li>
+                    <li>Kategorilere ait fotoğraflar</li>
+                    <li>Tüm ürünler</li>
+                    <li>Ürün fiyatları</li>
+                    <li>Ürün fotoğrafları</li>
+                    <li>Ürün etiketleri</li>
+                    <li>Ürün alerjenleri</li>
+                  </ul>
+                </div>
               </div>
+
               <AlertDialogFooter>
                 <AlertDialogCancel>İptal</AlertDialogCancel>
                 <AlertDialogAction
@@ -466,15 +479,62 @@ export function MenuDetail({ id }: MenuDetailProps) {
           <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
               <Button>
-                <PlusCircle className="w-4 h-4 mr-2" />
-                Kategori Ekle
+                <PlusCircle className="w-4 h-4 sm:mr-2" />
+                <span>Kategori Ekle</span>
               </Button>
             </DialogTrigger>
+            <DialogContent className="sm:min-w-[600px]">
+              <DialogHeader>
+                <DialogTitle className="text-xl font-semibold">Yeni Kategori Ekle</DialogTitle>
+                <DialogDescription className="text-muted-foreground text-base">
+                  Menüye yeni bir kategori ekleyin.
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="name">Kategori Adı</Label>
+                    <Input
+                      id="name"
+                      placeholder="Örn: Ana Yemekler"
+                      {...form.register("name", {
+                        required: "Kategori adı gereklidir",
+                        minLength: {
+                          value: 2,
+                          message: "Kategori adı en az 2 karakter olmalıdır"
+                        },
+                        maxLength: {
+                          value: 50,
+                          message: "Kategori adı en fazla 50 karakter olabilir"
+                        }
+                      })}
+                    />
+                    {form.formState.errors.name && (
+                      <p className="text-sm text-destructive mt-1">
+                        {form.formState.errors.name.message}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex justify-end gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    İptal
+                  </Button>
+                  <Button type="submit">
+                    Ekle
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
           </Dialog>
         </div>
       </div>
 
-      <div className="flex gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row gap-3 mb-4 md:mb-6">
         <div className="flex-1">
           <Input
             placeholder="Kategori ara..."
@@ -487,7 +547,7 @@ export function MenuDetail({ id }: MenuDetailProps) {
           value={statusFilter}
           onValueChange={(value) => setStatusFilter(value as "all" | "active" | "inactive")}
         >
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="Filtrele" />
           </SelectTrigger>
           <SelectContent>
@@ -500,9 +560,9 @@ export function MenuDetail({ id }: MenuDetailProps) {
 
       <div className="space-y-4">
         {filteredCategories.length === 0 ? (
-          <Card className="p-8">
+          <Card className="p-4 md:p-8">
             <div className="text-center">
-              <p className="text-muted-foreground">
+              <p className="text-sm md:text-base text-muted-foreground">
                 {categories.length === 0
                   ? 'Henüz hiç kategori eklenmemiş. "Kategori Ekle" butonunu kullanarak yeni kategoriler ekleyebilirsiniz.'
                   : "Arama kriterlerinize uygun ürün bulunamadı."}
@@ -521,7 +581,7 @@ export function MenuDetail({ id }: MenuDetailProps) {
               items={filteredCategories}
               strategy={rectSortingStrategy}
             >
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
                 {filteredCategories.map((category, index) => (
                   <CategoryCard
                     key={category.id}

@@ -34,6 +34,7 @@ body {
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
   }
+
   .dark {
     --background: 20 14.3% 4.1%;
     --foreground: 60 9.1% 97.8%;
@@ -66,6 +67,7 @@ body {
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
   }
@@ -106,4 +108,319 @@ body {
 
 .react-select-container .react-select__multi-value__remove {
   @apply hidden;
+}
+
+/* iPhone 14 Pro Mockup Styles */
+.iphone-front {
+  width: 294px;
+  height: 600px;
+  background-color: #000;
+  border-radius: 50px;
+  position: relative;
+  margin: 35px auto;
+}
+
+/* Ana Çerçeve */
+.iphone-front .frame {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 3px solid #bbb5b3;
+  border-radius: 50px;
+  box-shadow: 0 0 0 1px #4a4947;
+}
+
+/* Anten Çizgileri */
+.iphone-front .antenas>div {
+  background-color: #75726f;
+  position: absolute;
+}
+
+.iphone-front .antenas .tt {
+  width: 8px;
+  height: 3.5px;
+  top: 0;
+  right: 88px;
+}
+
+.iphone-front .antenas .tr {
+  width: 3.5px;
+  height: 8px;
+  top: 88px;
+  right: -1px;
+}
+
+.iphone-front .antenas .tl {
+  width: 3.5px;
+  height: 8px;
+  top: 88px;
+  left: -1px;
+}
+
+.iphone-front .antenas .bb {
+  width: 8px;
+  height: 3.5px;
+  bottom: -1.5px;
+  left: 88px;
+}
+
+.iphone-front .antenas .bl {
+  width: 3.5px;
+  height: 8px;
+  bottom: 88px;
+  left: -1px;
+}
+
+.iphone-front .antenas .br {
+  width: 3.5px;
+  height: 8px;
+  bottom: 88px;
+  right: -1px;
+}
+
+/* Yan Tuşlar */
+.iphone-front .keys .silent {
+  width: 3.5px;
+  height: 28px;
+  border-top: 2px solid #eae0d9;
+  border-bottom: 2px solid #eae0d9;
+  position: absolute;
+  top: 105px;
+  left: -4.5px;
+  background: linear-gradient(90deg, #888, #555);
+}
+
+.iphone-front .keys .volt {
+  width: 3.5px;
+  height: 50px;
+  border-top: 2px solid #eae0d9;
+  border-bottom: 2px solid #eae0d9;
+  position: absolute;
+  top: 150px;
+  left: -4.5px;
+  background: linear-gradient(90deg, #888, #555);
+}
+
+.iphone-front .keys .volb {
+  width: 3.5px;
+  height: 50px;
+  border-top: 2px solid #eae0d9;
+  border-bottom: 2px solid #eae0d9;
+  position: absolute;
+  top: 210px;
+  left: -4.5px;
+  background: linear-gradient(90deg, #888, #555);
+}
+
+.iphone-front .keys .lock {
+  width: 3.5px;
+  height: 70px;
+  border-top: 2px solid #eae0d9;
+  border-bottom: 2px solid #eae0d9;
+  position: absolute;
+  top: 192px;
+  right: -4.5px;
+  background: linear-gradient(-90deg, #888, #555);
+}
+
+/* Ekran */
+.iphone-front .screen {
+  width: 270px;
+  height: 576px;
+  background-color: #fff;
+  /* Varsayılan arka plan rengi */
+  border-radius: 40px;
+  margin: 12px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  margin: auto;
+}
+
+/* Dynamic Island */
+.iphone-front .screen .island {
+  position: absolute;
+  top: 12px;
+  right: 0;
+  left: 0;
+  margin-right: auto;
+  margin-left: auto;
+  width: 90px;
+  height: 25px;
+  background-color: #000;
+  border-radius: 40px;
+  z-index: 10;
+}
+
+.iphone-front .screen .island .camera {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  right: 10px;
+  width: 15px;
+  height: 15px;
+  background-color: #111;
+  border-radius: 50%;
+}
+
+.iphone-front .screen .island .camera::before {
+  content: '';
+  display: block;
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background-color: #161a3c;
+}
+
+.iphone-front .screen .island .camera::after {
+  content: '';
+  display: block;
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  width: 5px;
+  height: 5px;
+  background: linear-gradient(0deg, #03344f 0%, #040e27 50%, #3e5191 100%);
+  border-radius: 50%;
+}
+
+/* İçerik Alanı */
+.iphone-front .screen .screen-content {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  padding: 45px 15px 15px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Renk Varyasyonları */
+.iphone-front.space-black {
+  background-color: #1f1f1f;
+}
+
+.iphone-front.space-black .frame {
+  border-color: #2a2a2a;
+}
+
+.iphone-front.deep-purple {
+  background-color: #635985;
+}
+
+.iphone-front.deep-purple .frame {
+  border-color: #7a6fa1;
+}
+
+.iphone-front.gold {
+  background-color: #f4c18f;
+}
+
+.iphone-front.gold .frame {
+  border-color: #fad4b0;
+}
+
+.iphone-front.silver {
+  background-color: #f5f5f0;
+}
+
+.iphone-front.silver .frame {
+  border-color: #ffffff;
+}
+
+/* Tema Renkleri */
+.deep-purple {
+  --theme-color: 284;
+  --theme-saturation: 100%;
+  --theme-lightness: 50%;
+}
+
+.gold {
+  --theme-color: 22.5;
+  --theme-saturation: 100%;
+  --theme-lightness: 50%;
+}
+
+.space-black {
+  --theme-color: 215;
+  --theme-saturation: 50%;
+  --theme-lightness: 20%;
+}
+
+.silver {
+  --theme-color: 254;
+  --theme-saturation: 10%;
+  --theme-lightness: 80%;
+}
+
+/* İçerik Alanı */
+.screen-content {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  padding: calc(var(--notch-height) + 20px) 20px 20px;
+  overflow-y: auto;
+}
+
+/* Zoom Kontrol Butonu */
+.zoom-control {
+  position: absolute;
+  bottom: -50px;
+  right: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.zoom-control:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Preview Content Styles */
+.preview-content {
+  position: relative;
+  margin-top: auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+.business-name {
+  font-size: 2rem;
+  line-height: 1.2;
+  margin-bottom: 1rem;
+}
+
+.welcome-text {
+  font-size: 1.125rem;
+  margin-bottom: 2rem;
+}
+
+.menu-button {
+  width: 100%;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+/* Select açıkken body'nin overflow'unu koruyalım */
+body[style*="overflow: hidden;"] {
+  overflow: auto !important;
+  padding-right: 0 !important;
 }

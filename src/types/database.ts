@@ -24,6 +24,8 @@ interface Appearance {
 // Menu tablosu için type
 export interface Menu extends BaseEntity, Sortable, Appearance {
   name: string;
+  business_id: string;
+  businesses?: Business;
   categories?: Category[];
 }
 
@@ -175,4 +177,53 @@ export interface ProductFormValues {
 // DTO tipleri
 export interface UnitCreateDTO {
   name: string;
+}
+
+// Business tablosu için type
+export interface Business extends BaseEntity {
+  user_id?: string;
+  name: string;
+  slug: string;
+  created_at: string;
+  menu_settings?: MenuSettings;
+  business_users?: { role: string }[];
+}
+
+// Menu Settings tablosu için type
+export interface MenuSettings {
+  id: string;
+  business_id: string;
+  welcome_title: string;
+  welcome_title_font: string;
+  welcome_text?: string;
+  welcome_color: string;
+  button_text: string;
+  button_font: string;
+  button_color: string;
+  button_text_color: string;
+  background_type: 'image' | 'color';
+  background_color?: string;
+  background_url?: string;
+  logo_url?: string;
+  loader_url?: string;
+  created_at: string;
+  businesses?: {
+    id: string;
+    name: string;
+  };
+}
+
+// Menu Settings form değerleri için type
+export interface MenuSettingsFormValues {
+  welcome_title: string;
+  welcome_text?: string;
+  font: string;
+  welcome_title_font: string;
+  welcome_color: string;
+  button_text: string;
+  button_color: string;
+  button_text_color: string;
+  background_type: "image" | "color";
+  background_color?: string;
+  background_url?: string;
 }

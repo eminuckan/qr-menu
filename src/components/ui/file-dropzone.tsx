@@ -1,12 +1,12 @@
 import * as React from "react"
-import { useDropzone } from "react-dropzone"
+import { useDropzone, DropzoneOptions } from "react-dropzone"
 import { AlertCircle, Loader2 } from "lucide-react"
 import { Alert, AlertDescription } from "./alert"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
 
-interface FileDropzoneProps {
-  onDrop: (files: File[]) => Promise<void>
+interface FileDropzoneProps extends DropzoneOptions {
+  onDrop: (files: File[]) => void
   isUploading?: boolean
   maxSize?: number
   minWidth?: number
@@ -14,49 +14,56 @@ interface FileDropzoneProps {
   accept?: Record<string, string[]>
   multiple?: boolean
   className?: string
-  alertMessage?: string | null
+  children?: React.ReactNode
+  fileType?: 'image' | 'animation'
 }
 
-export function FileDropzone({
+export const FileDropzone = ({
   onDrop,
   isUploading = false,
   maxSize = 5 * 1024 * 1024, // 5MB default
-  minWidth = 350,
-  minHeight = 350,
+  minWidth,
+  minHeight,
   accept = {
     "image/*": [".jpeg", ".jpg", ".png"],
   },
   multiple = true,
-  className
-}: FileDropzoneProps) {
+  className,
+  children,
+  fileType = 'image'
+}: FileDropzoneProps) => {
   const { toast } = useToast()
 
-  const validateImageDimensions = (file: File): Promise<boolean> => {
+  const validateFile = (file: File): Promise<boolean> => {
     return new Promise((resolve) => {
-      const img = new Image()
-      img.src = URL.createObjectURL(file)
+      if (file.type.startsWith('image/') && minWidth && minHeight) {
+        const img = new Image()
+        img.src = URL.createObjectURL(file)
 
-      img.onload = () => {
-        URL.revokeObjectURL(img.src)
-        if (img.width < minWidth || img.height < minHeight) {
+        img.onload = () => {
+          URL.revokeObjectURL(img.src)
+          if (img.width < minWidth || img.height < minHeight) {
+            toast({
+              variant: "destructive",
+              title: "Hata",
+              description: `Fotoğraf boyutları minimum ${minWidth}x${minHeight} piksel olmalıdır.`,
+            })
+            resolve(false)
+          }
+          resolve(true)
+        }
+
+        img.onerror = () => {
+          URL.revokeObjectURL(img.src)
           toast({
             variant: "destructive",
             title: "Hata",
-            description: `Fotoğraf boyutları minimum ${minWidth}x${minHeight} piksel olmalıdır.`,
+            description: "Fotoğraf yüklenirken bir hata oluştu.",
           })
           resolve(false)
         }
+      } else {
         resolve(true)
-      }
-
-      img.onerror = () => {
-        URL.revokeObjectURL(img.src)
-        toast({
-          variant: "destructive",
-          title: "Hata",
-          description: "Fotoğraf yüklenirken bir hata oluştu.",
-        })
-        resolve(false)
       }
     })
   }
@@ -69,14 +76,14 @@ export function FileDropzone({
       if (acceptedFiles?.length > 0) {
         const validFiles = await Promise.all(
           acceptedFiles.map(async (file) => {
-            const isValid = await validateImageDimensions(file);
-            return isValid ? file : null;
+            const isValid = await validateFile(file)
+            return isValid ? file : null
           })
-        );
+        )
 
-        const filteredFiles = validFiles.filter(Boolean) as File[];
+        const filteredFiles = validFiles.filter(Boolean) as File[]
         if (filteredFiles.length > 0) {
-          await onDrop(filteredFiles);
+          await onDrop(filteredFiles)
         }
       }
     },
@@ -92,11 +99,17 @@ export function FileDropzone({
         }
       })
     },
+    onError: () => {
+      toast({
+        variant: "destructive",
+        title: "Hata",
+        description: fileType === 'animation' ? "Animasyon dosyası yüklenirken bir hata oluştu." : "Fotoğraf yüklenirken bir hata oluştu.",
+      })
+    },
   })
 
   return (
     <div className={cn("space-y-4", className)}>
-
       <div
         {...getRootProps()}
         className={cn(
@@ -112,7 +125,7 @@ export function FileDropzone({
             <p>Yükleniyor...</p>
           </div>
         ) : (
-          <p>Fotoğraf yüklemek için sürükleyin veya tıklayın</p>
+          children || "Fotoğraf yüklemek için sürükleyin veya tıklayın"
         )}
       </div>
     </div>

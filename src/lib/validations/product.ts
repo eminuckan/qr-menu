@@ -1,15 +1,18 @@
 import * as z from "zod"
 
 export const productFormSchema = z.object({
-  name: z.string().min(1, "Ürün adı zorunludur"),
-  color: z.string().regex(/^#([A-Fa-f0-9]{6})$/, "Geçersiz renk kodu").default("#FFFFFF"),
-  calories: z.coerce.number().min(0, "Kalori negatif olamaz").optional().default(0),
-  preparing_time: z.coerce.number().min(0, "Hazırlanma süresi negatif olamaz").optional().default(0),
-  allergens: z.array(z.enum(['gluten', 'shellfish', 'fish', 'eggs', 'dairy', 'nuts', 'peanuts', 'wheat', 'sulfur_dioxide', 'mustard', 'sesame', 'soy', 'lupin', 'celery'] as const)).default([]),
-  tags: z.array(z.enum(['new', 'signature', 'chef_recommendation', 'popular', 'vegan', 'special'] as const)).default([]),
+  name: z
+    .string()
+    .min(2, "Ürün adı en az 2 karakter olmalıdır")
+    .max(50, "Ürün adı en fazla 50 karakter olabilir"),
+  color: z.string().optional(),
+  calories: z.number().min(0, "Kalori negatif olamaz").optional(),
+  preparing_time: z.number().min(0, "Hazırlanma süresi negatif olamaz").optional(),
+  allergens: z.array(z.string()).optional(),
+  tags: z.array(z.string()).optional(),
   unit_id: z.string().min(1, "Birim seçmelisiniz"),
-  price: z.coerce.number().min(0, "Fiyat negatif olamaz").default(0),
-  description: z.string().optional().default(""),
+  price: z.number().min(0, "Fiyat negatif olamaz"),
+  description: z.string().optional(),
 })
 
 export type ProductFormValues = z.infer<typeof productFormSchema> 

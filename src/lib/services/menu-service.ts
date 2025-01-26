@@ -1,73 +1,148 @@
 import { createClient } from "../supabase/client";
+import { MenuFormValues } from "../validations/menu";
 
 export const MenuService = {
-    async deleteMenu(menuId: string) {
+    async getMenus() {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("Kullanıcı bulunamadı");
+
+        const { data, error } = await supabase
+            .from('menus')
+            .select(`
+                *,
+                businesses!inner (
+                    id,
+                    name,
+                    business_users!inner (
+                        user_id
+                    )
+                )
+            `)
+            .eq('businesses.business_users.user_id', user.id);
+
+        if (error) throw error;
+        return data;
+    },
+
+    async createMenu(values: MenuFormValues & { business_id: string }) {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("Kullanıcı bulunamadı");
+
+        // Kullanıcının bu işletmeye erişimi var mı kontrol et
+        const { data: hasAccess } = await supabase
+            .from('business_users')
+            .select('business_id')
+            .eq('business_id', values.business_id)
+            .eq('user_id', user.id)
+            .single();
+
+        if (!hasAccess) throw new Error("Bu işletmeye erişiminiz yok");
+
+        const { data, error } = await supabase
+            .from('menus')
+            .insert({
+                name: values.name,
+                business_id: values.business_id,
+                is_active: true,
+                sort_order: 0
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    },
+
+    async updateMenu(id: string, values: MenuFormValues & { business_id: string }) {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("Kullanıcı bulunamadı");
+
+        // Kullanıcının bu işletmeye erişimi var mı kontrol et
+        const { data: hasAccess } = await supabase
+            .from('business_users')
+            .select('business_id')
+            .eq('business_id', values.business_id)
+            .eq('user_id', user.id)
+            .single();
+
+        if (!hasAccess) throw new Error("Bu işletmeye erişiminiz yok");
+
+        const { data, error } = await supabase
+            .from('menus')
+            .update({
+                name: values.name,
+                business_id: values.business_id
+            })
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    },
+
+    async deleteMenu(id: string) {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("Kullanıcı bulunamadı");
+
+        // Menünün kullanıcıya ait olup olmadığını kontrol et
+        const { data: menu } = await supabase
+            .from('menus')
+            .select(`
+                id,
+                businesses!inner (
+                    business_users!inner (
+                        user_id
+                    )
+                )
+            `)
+            .eq('id', id)
+            .eq('businesses.business_users.user_id', user.id)
+            .single();
+
+        if (!menu) throw new Error("Bu menüyü silme yetkiniz yok");
+
+        const { error } = await supabase
+            .from('menus')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+        return true;
+    },
+
+    async moveMenuToBusiness(menuId: string, businessId: string) {
         const supabase = createClient();
 
         try {
-            const { data: categories, error: categoriesError } = await supabase
-                .from('categories')
-                .select('id, cover_image')
-                .eq('menu_id', menuId);
+            // Önce hedef işletmenin adını al
+            const { data: business, error: businessError } = await supabase
+                .from('businesses')
+                .select('name')
+                .eq('id', businessId)
+                .single();
 
-            if (categoriesError) throw categoriesError;
+            if (businessError) throw businessError;
 
-            if (categories?.length) {
-                const { data: products, error: productsError } = await supabase
-                    .from('products')
-                    .select('id')
-                    .in('category_id', categories.map(c => c.id));
-
-                if (productsError) throw productsError;
-
-                if (products?.length) {
-                    const { data: productImages, error: imagesError } = await supabase
-                        .from('product_images')
-                        .select('image_url')
-                        .in('product_id', products.map(p => p.id));
-
-                    if (imagesError) throw imagesError;
-
-                    if (productImages?.length) {
-                        const fileNames = productImages
-                            .map(img => img.image_url?.split('/').pop())
-                            .filter(Boolean) as string[];
-
-                        if (fileNames.length > 0) {
-                            const { error: storageError } = await supabase.storage
-                                .from('product-images')
-                                .remove(fileNames);
-
-                            if (storageError) throw storageError;
-                        }
-                    }
-                }
-
-
-                const categoryImages = categories
-                    .map(cat => cat.cover_image?.split('/').pop())
-                    .filter(Boolean) as string[];
-
-                if (categoryImages.length > 0) {
-                    const { error: categoryImageError } = await supabase.storage
-                        .from('category-images')
-                        .remove(categoryImages);
-
-                    if (categoryImageError) throw categoryImageError;
-                }
-            }
-
-            const { error: deleteError } = await supabase
+            // Menüyü taşı
+            const { error } = await supabase
                 .from('menus')
-                .delete()
+                .update({ business_id: businessId })
                 .eq('id', menuId);
 
-            if (deleteError) throw deleteError;
+            if (error) throw error;
 
-            return true;
+            return {
+                success: true,
+                businessName: business.name // İşletme adını da dön
+            };
         } catch (error) {
-            console.error('Menü silme hatası:', error);
-            throw new Error(error instanceof Error ? error.message : 'Menü silinirken bir hata oluştu');
+            console.error('Error moving menu:', error);
+            throw error;
         }
     }
 }; 

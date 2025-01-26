@@ -17,7 +17,7 @@ import {
 } from "@dnd-kit/sortable";
 import { SortableItem } from "@/components/ui/sortable-item";
 import { Switch } from "@/components/ui/switch";
-import { GripVertical, Eye, Plus, RefreshCw } from "lucide-react";
+import { GripVertical, Eye, Plus, RefreshCw, Building2, ArrowRightLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -56,12 +56,35 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { MenuService } from "@/lib/services/menu-service";
+import { BusinessService } from "@/lib/services/business-service";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Card, CardContent } from "@/components/ui/card";
 
-interface MenuItem {
+interface Business {
   id: string;
   name: string;
-  isActive: boolean;
+}
+
+interface Menu {
+  id: string;
+  name: string;
+  business_id: string;
+  is_active: boolean;
   sort_order: number;
+  color?: string;
+  created_at: string;
+  cover_image?: string;
+  businesses: {
+    id: string;
+    name: string;
+  };
 }
 
 const menuFormSchema = z.object({
@@ -69,6 +92,9 @@ const menuFormSchema = z.object({
     .string()
     .min(2, "Menü adı en az 2 karakter olmalıdır")
     .max(50, "Menü adı en fazla 50 karakter olabilir"),
+  business_id: z
+    .string()
+    .min(1, "İşletme seçmelisiniz")
 });
 
 type MenuFormValues = z.infer<typeof menuFormSchema>;
@@ -79,9 +105,25 @@ const formatCountdown = (seconds: number) => {
   return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
 };
 
+// Menüleri işletmelere göre gruplamak için helper fonksiyon
+const groupMenusByBusiness = (menus: Menu[]) => {
+  return menus.reduce((groups, menu) => {
+    const businessId = menu.businesses.id;
+    if (!groups[businessId]) {
+      groups[businessId] = {
+        businessName: menu.businesses.name,
+        menus: []
+      };
+    }
+    groups[businessId].menus.push(menu);
+    return groups;
+  }, {} as Record<string, { businessName: string; menus: Menu[] }>);
+};
+
 const Page = () => {
   const [mounted, setMounted] = useState(false);
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [menus, setMenus] = useState<Menu[]>([]);
+  const [businesses, setBusinesses] = useState<Business[]>([]);
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const [importing, setImporting] = useState(false);
@@ -100,6 +142,8 @@ const Page = () => {
   const [rateLimitCountdown, setRateLimitCountdown] = useState(0);
   const [showAbortDialog, setShowAbortDialog] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [moveMenuId, setMoveMenuId] = useState<string | null>(null);
+  const supabase = createClient();
 
   const form = useForm<MenuFormValues>({
     resolver: zodResolver(menuFormSchema),
@@ -109,63 +153,59 @@ const Page = () => {
   });
 
   const getMenus = useCallback(async () => {
-    const supabase = createClient();
-    const { data, error } = await supabase
-      .from("menus")
-      .select("*")
-      .order("sort_order", { ascending: true });
+    try {
+      const { data, error } = await supabase
+        .from('menus')
+        .select(`
+          *,
+          businesses (
+            id,
+            name
+          )
+        `)
+        .order('name');
 
-    if (error) {
-      return notFound();
-    }
+      if (error) {
+        console.error('Error fetching menus:', error);
+        return;
+      }
 
-    const formattedMenus: MenuItem[] = data.map((menu) => ({
-      id: menu.id,
-      name: menu.name,
-      isActive: menu.is_active,
-      sort_order: menu.sort_order,
-    }));
-
-    setMenuItems(formattedMenus);
-  }, []);
-
-  const handleAddMenu = async (values: MenuFormValues) => {
-    const supabase = createClient();
-
-    const newMenu = {
-      name: values.name,
-      is_active: true,
-      sort_order: menuItems.length + 1,
-    };
-
-    const { data, error } = await supabase
-      .from("menus")
-      .insert([newMenu])
-      .select()
-      .single();
-
-    if (error) {
+      setMenus(data || []);
+      setBusinesses(await BusinessService.getBusinesses());
+    } catch (error) {
       toast({
         variant: "destructive",
         title: "Hata",
-        description: "Menü eklenirken bir hata oluştu.",
+        description: "Veriler yüklenirken bir hata oluştu.",
       });
-      return;
     }
+  }, []);
 
-    setMenuItems([...menuItems, {
-      id: data.id,
-      name: data.name,
-      isActive: data.is_active,
-      sort_order: data.sort_order,
-    }]);
+  const handleAddMenu = async (values: MenuFormValues) => {
+    try {
+      const newMenu = await MenuService.createMenu(values);
 
-    toast({
-      title: "Başarılı",
-      description: "Menü başarıyla eklendi.",
-    });
-    form.reset();
-    setOpen(false);
+      setMenus(prev => [...prev, {
+        ...newMenu,
+        businesses: {
+          id: values.business_id,
+          name: businesses.find(b => b.id === values.business_id)?.name || ''
+        }
+      }]);
+
+      toast({
+        title: "Başarılı",
+        description: "Menü başarıyla eklendi.",
+      });
+      form.reset();
+      setOpen(false);
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Hata",
+        description: error instanceof Error ? error.message : "Menü eklenirken bir hata oluştu.",
+      });
+    }
   };
 
   const sensors = useSensors(
@@ -179,7 +219,7 @@ const Page = () => {
     const { active, over } = event;
 
     if (active.id !== over.id) {
-      setMenuItems((items) => {
+      setMenus((items) => {
         const oldIndex = items.findIndex((item) => item.id === active.id);
         const newIndex = items.findIndex((item) => item.id === over.id);
 
@@ -191,13 +231,15 @@ const Page = () => {
         }));
 
         const updateDatabase = async () => {
-          const supabase = createClient();
-
           const updates = updatedItems.map((item) => ({
             id: item.id,
             sort_order: item.sort_order,
-            is_active: item.isActive,
+            is_active: item.is_active,
             name: item.name,
+            color: item.color,
+            created_at: item.created_at,
+            cover_image: item.cover_image,
+            business_id: item.business_id
           }));
 
           const { error } = await supabase
@@ -227,8 +269,6 @@ const Page = () => {
   };
 
   const handleActiveChange = async (id: string, checked: boolean) => {
-    const supabase = createClient();
-
     const { error } = await supabase
       .from("menus")
       .update({ is_active: checked })
@@ -243,10 +283,10 @@ const Page = () => {
       return;
     }
 
-    setMenuItems((prevItems) =>
+    setMenus((prevItems) =>
       prevItems.map((menuItem) =>
         menuItem.id === id
-          ? { ...menuItem, isActive: checked }
+          ? { ...menuItem, is_active: checked }
           : menuItem
       )
     );
@@ -257,10 +297,43 @@ const Page = () => {
     });
   };
 
+  const handleBusinessChange = async (menuId: string, businessId: string) => {
+    try {
+      const { error } = await supabase
+        .from('menus')
+        .update({ business_id: businessId })
+        .eq('id', menuId);
+
+      if (error) throw error;
+
+      // State'i güncelle
+      setMenus(prev => prev.map(menu =>
+        menu.id === menuId
+          ? {
+            ...menu,
+            business_id: businessId,
+            businesses: businesses.find(b => b.id === businessId) || menu.businesses
+          }
+          : menu
+      ));
+
+      toast({
+        title: "Başarılı",
+        description: "Menü başarıyla taşındı.",
+      });
+    } catch (error) {
+      console.error('Error updating menu:', error);
+      toast({
+        variant: "destructive",
+        title: "Hata",
+        description: "Menü taşınırken bir hata oluştu.",
+      });
+    }
+  };
+
   const handleImport = async () => {
     setImporting(true);
 
-    const supabase = createClient();
     const { data: existingMenu } = await supabase
       .from('menus')
       .select('*')
@@ -275,7 +348,7 @@ const Page = () => {
         .insert({
           name: 'Adisyo Menü',
           is_active: true,
-          sort_order: menuItems.length + 1,
+          sort_order: menus.length + 1,
           color: '#ffffff'
         })
         .select()
@@ -291,11 +364,19 @@ const Page = () => {
         return;
       }
 
-      setMenuItems(prev => [...prev, {
+      setMenus(prev => [...prev, {
         id: newMenu.id,
         name: newMenu.name,
-        isActive: newMenu.is_active,
+        is_active: newMenu.is_active,
         sort_order: newMenu.sort_order,
+        color: newMenu.color,
+        created_at: newMenu.created_at,
+        business_id: newMenu.business_id,
+        businesses: {
+          id: newMenu.business_id,
+          name: newMenu.businesses.name
+        },
+        cover_image: newMenu.cover_image
       }]);
 
       newMenuId = newMenu.id;
@@ -320,7 +401,7 @@ const Page = () => {
 
       if (result.aborted) {
         if (!existingMenu) {
-          setMenuItems(prev => prev.filter(item => item.id !== newMenuId));
+          setMenus(prev => prev.filter(item => item.id !== newMenuId));
         }
 
         toast({
@@ -345,7 +426,7 @@ const Page = () => {
     } catch (error) {
 
       if (!existingMenu) {
-        setMenuItems(prev => prev.filter(item => item.id !== newMenuId));
+        setMenus(prev => prev.filter(item => item.id !== newMenuId));
       }
 
       if (error instanceof Error && error.message.includes('rate limit')) {
@@ -415,6 +496,34 @@ const Page = () => {
   const handleAbortCancel = () => {
     setShowAbortDialog(false);
     setIsPaused(false);
+  };
+
+  const handleMoveMenu = async (menuId: string, newBusinessId: string) => {
+    try {
+      const result = await MenuService.moveMenuToBusiness(menuId, newBusinessId);
+
+      setMenus(prev => prev.map(menu =>
+        menu.id === menuId
+          ? {
+            ...menu,
+            business_id: newBusinessId,
+            businesses: businesses.find(b => b.id === newBusinessId) || menu.businesses
+          }
+          : menu
+      ));
+
+      toast({
+        title: "Başarılı",
+        description: `Menü başarıyla ${result.businessName} işletmesine taşındı.`,
+      });
+      setMoveMenuId(null);
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Hata",
+        description: "Menü taşınırken bir hata oluştu.",
+      });
+    }
   };
 
   useEffect(() => {
@@ -549,6 +658,30 @@ const Page = () => {
                       </FormItem>
                     )}
                   />
+                  <FormField
+                    control={form.control}
+                    name="business_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>İşletme</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="İşletme seçin" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {businesses.map((business) => (
+                              <SelectItem key={business.id} value={business.id}>
+                                {business.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   <Button type="submit" className="w-full text-base">
                     Ekle
                   </Button>
@@ -565,42 +698,61 @@ const Page = () => {
         onDragEnd={handleDragEnd}
       >
         <SortableContext
-          items={menuItems}
+          items={menus}
           strategy={verticalListSortingStrategy}
         >
-          <div className="space-y-2">
-            {menuItems.map((item, index) => (
-              <div
-                key={item.id}
-                className="flex items-center justify-between p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
-              >
-                <SortableItem id={item.id}>
-                  <div className="flex items-center gap-3 flex-1 cursor-grab">
-                    <GripVertical className="h-5 w-5 text-gray-400" />
-                    <span className="text-gray-400 font-medium text-sm">
-                      #{String(index + 1).padStart(2, "0")}
-                    </span>
-                    <span className="font-medium">{item.name}</span>
-                  </div>
-                </SortableItem>
-                <div className="flex items-center gap-4 pl-4 border-l">
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={item.isActive}
-                      onCheckedChange={(checked) => handleActiveChange(item.id, checked)}
-                    />
-                    <span className="text-sm font-medium text-muted-foreground">
-                      {item.isActive ? "Aktif" : "Pasif"}
-                    </span>
-                  </div>
-                  <Link href={`/dashboard/menu/${item.id}`}>
-                    <Button variant="outline" size="sm" className="gap-2" asChild>
-                      <span>
-                        <Eye className="h-4 w-4" />
-                        İncele
-                      </span>
-                    </Button>
-                  </Link>
+          <div className="space-y-8">
+            {Object.entries(groupMenusByBusiness(menus)).map(([businessId, { businessName, menus: businessMenus }]) => (
+              <div key={businessId} className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-muted-foreground" />
+                  <h3 className="text-lg font-semibold">{businessName}</h3>
+                </div>
+                <div className="space-y-2 pl-7">
+                  {businessMenus.map((item, index) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
+                    >
+                      <SortableItem id={item.id}>
+                        <div className="flex items-center gap-3 flex-1 cursor-grab">
+                          <GripVertical className="h-5 w-5 text-gray-400" />
+                          <span className="text-gray-400 font-medium text-sm">
+                            #{String(index + 1).padStart(2, "0")}
+                          </span>
+                          <span className="font-medium">{item.name}</span>
+                        </div>
+                      </SortableItem>
+                      <div className="flex items-center gap-4 pl-4 border-l">
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={item.is_active}
+                            onCheckedChange={(checked) => handleActiveChange(item.id, checked)}
+                          />
+                          <span className="text-sm font-medium text-muted-foreground">
+                            {item.is_active ? "Aktif" : "Pasif"}
+                          </span>
+                        </div>
+                        <Link href={`/dashboard/menu/${item.id}`}>
+                          <Button variant="outline" size="sm" className="gap-2" asChild>
+                            <span>
+                              <Eye className="h-4 w-4" />
+                              İncele
+                            </span>
+                          </Button>
+                        </Link>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-2"
+                          onClick={() => setMoveMenuId(item.id)}
+                        >
+                          <ArrowRightLeft className="h-4 w-4" />
+                          Taşı
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             ))}
@@ -676,6 +828,35 @@ const Page = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={!!moveMenuId} onOpenChange={() => setMoveMenuId(null)}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Menüyü Taşı</DialogTitle>
+            <DialogDescription>
+              Menüyü taşımak istediğiniz işletmeyi seçin.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <Select
+              onValueChange={(businessId) => moveMenuId && handleMoveMenu(moveMenuId, businessId)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="İşletme seçin" />
+              </SelectTrigger>
+              <SelectContent>
+                {businesses
+                  .filter(b => b.id !== menus.find(m => m.id === moveMenuId)?.business_id)
+                  .map((business) => (
+                    <SelectItem key={business.id} value={business.id}>
+                      {business.name}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

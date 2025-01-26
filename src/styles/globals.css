@@ -1,0 +1,13 @@
+@import url('https://api.fontshare.com/v2/css?f[]=satoshi@1,900,700,500,300,400&f[]=clash-display@200,400,300,500,600,700&f[]=cabinet-grotesk@1,800,500,100,700,400,300,200,900&f[]=general-sans@701,200,301,300,500,600,400,700&display=swap');
+
+/* ... diğer stiller ... */
+
+.font-cal {
+    font-family: "Cal Sans", sans-serif;
+}
+
+.font-satoshi {
+    font-family: "Satoshi", sans-serif;
+}
+
+/* ... diğer font sınıfları ... */
