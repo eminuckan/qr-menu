@@ -144,5 +144,31 @@ export const MenuService = {
             console.error('Error moving menu:', error);
             throw error;
         }
+    },
+
+    async getMenusByBusinessId(businessId: string) {
+        const supabase = createClient();
+
+        const { data, error } = await supabase
+            .from('menus')
+            .select(`
+                id,
+                name,
+                is_active,
+                sort_order,
+                categories (
+                    id,
+                    name,
+                    cover_image,
+                    sort_order,
+                    is_active
+                )
+            `)
+            .eq('business_id', businessId)
+            .eq('is_active', true)
+            .order('sort_order');
+
+        if (error) throw error;
+        return data;
     }
 }; 

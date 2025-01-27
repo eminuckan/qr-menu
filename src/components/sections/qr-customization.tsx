@@ -111,8 +111,9 @@ export const QRCustomization = ({ editingQR, selectedBusiness, onCancel, onSave 
 
     useEffect(() => {
         if (selectedBusiness) {
-            const url = `${process.env.NEXT_PUBLIC_APP_URL}/qr-menu/${selectedBusiness.slug}`;
-            setPreviewUrl(url);
+            // Redirect URL'i oluştur
+            const redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL}/r/${selectedBusiness.id}`;
+            setPreviewUrl(redirectUrl);
             form.setValue("business_id", selectedBusiness.id);
         }
     }, [selectedBusiness]);

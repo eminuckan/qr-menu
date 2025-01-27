@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
-import { Business, MenuSettings } from "@/types/database";
+import { Business, MenuSettings, MenuSettingsFormValues } from "@/types/database";
 
 export const menuSettingsService = {
     // İşletme oluşturma
@@ -62,64 +62,66 @@ export const menuSettingsService = {
     },
 
     // Menu ayarlarını getir
-    async getMenuSettings(businessId: string) {
+    async getMenuSettings(businessId: string): Promise<MenuSettings> {
         const supabase = createClient();
 
-        try {
-            const { data, error } = await supabase
-                .from('menu_settings')
-                .select(`
-                    *,
-                    businesses (
-                        id,
-                        name
-                    )
-                `)
-                .eq('business_id', businessId)
-                .single();
+        const { data, error } = await supabase
+            .from('menu_settings')
+            .select(`
+                id,
+                business_id,
+                welcome_title,
+                welcome_title_font,
+                welcome_text,
+                welcome_color,
+                button_text,
+                button_font,
+                button_color,
+                button_text_color,
+                background_type,
+                background_color,
+                background_url,
+                logo_url,
+                loader_url,
+                created_at,
+                businesses (
+                    id,
+                    name
+                )
+            `)
+            .eq('business_id', businessId)
+            .single();
 
-            // Eğer kayıt bulunamazsa varsayılan değerleri dön
-            if (error?.code === 'PGRST116') {
-                return {
-                    business_id: businessId,
-                    welcome_title: "",
-                    welcome_title_font: "inter",
-                    welcome_text: "Hoş geldiniz",
-                    welcome_color: "#000000",
-                    button_text: "Menüyü Görüntüle",
-                    button_font: "inter",
-                    button_color: "#000000",
-                    button_text_color: "#FFFFFF",
-                    background_type: "image",
-                    background_color: "",
-                    background_url: "",
-                    logo_url: "",
-                    loader_url: ""
-                };
-            }
-
-            if (error) throw error;
-
+        if (error) {
+            console.error('Error fetching menu settings:', error);
+            // Varsayılan ayarları döndür
             return {
-                ...data,
-                welcome_title: data.welcome_title || "",
-                welcome_title_font: data.welcome_title_font || "inter",
-                welcome_text: data.welcome_text || "Hoş geldiniz",
-                welcome_color: data.welcome_color || "#000000",
-                button_text: data.button_text || "Menüyü Görüntüle",
-                button_font: data.button_font || "inter",
-                button_color: data.button_color || "#000000",
-                button_text_color: data.button_text_color || "#FFFFFF",
-                background_type: data.background_type || "image",
-                background_color: data.background_color || "",
-                background_url: data.background_url || "",
-                logo_url: data.logo_url || "",
-                loader_url: data.loader_url || ""
+                id: '',
+                business_id: businessId,
+                welcome_title: 'Hoş Geldiniz',
+                welcome_title_font: 'cal-sans',
+                welcome_text: '',
+                welcome_color: '#000000',
+                button_text: 'Menüyü İncele',
+                button_font: 'cal-sans',
+                button_color: '#000000',
+                button_text_color: '#FFFFFF',
+                background_type: 'color',
+                background_color: '#FFFFFF',
+                created_at: new Date().toISOString()
             };
-        } catch (error) {
-            console.error('Get menu settings error:', error);
-            throw error;
         }
+
+        // Veriyi MenuSettings tipine uygun şekilde dönüştür
+        const menuSettings: MenuSettings = {
+            ...data,
+            businesses: data.businesses?.[0] ? {
+                id: data.businesses[0].id as string,
+                name: data.businesses[0].name as string
+            } : undefined
+        };
+
+        return menuSettings;
     },
 
     // Menu ayarlarını güncelle

@@ -227,5 +227,59 @@ export const BusinessService = {
             console.error('Error deleting business:', error);
             throw error;
         }
+    },
+
+    async getBusinessById(id: string) {
+        try {
+            const supabase = createClient();
+
+            const { data, error } = await supabase
+                .from('businesses')
+                .select(`
+                    id,
+                    name,
+                    slug,
+                    created_at,
+                    updated_at
+                `)
+                .eq('id', id)
+                .single();
+
+            if (error) {
+                console.error('Error fetching business:', error);
+                throw error;
+            }
+
+            return data;
+        } catch (error) {
+            console.error('Business service error:', error);
+            return null;
+        }
+    },
+
+    async getBusinessBySlug(slug: string) {
+        const supabase = createClient();
+        const cleanSlug = slug.trim();
+
+        const { data, error } = await supabase
+            .from('businesses')
+            .select(`
+                id,
+                name,
+                slug,
+                created_at,
+                updated_at
+            `)
+            .eq('slug', cleanSlug)
+            .single();
+
+        if (error) {
+            if (error.code === 'PGRST116') {
+                return null;
+            }
+            throw error;
+        }
+
+        return data;
     }
 }; 

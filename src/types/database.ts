@@ -18,21 +18,29 @@ interface Sortable {
 // Renk ve görsel için interface
 interface Appearance {
   color?: string | null;
-  cover_image?: string | null;
 }
 
-// Menu tablosu için type
-export interface Menu extends BaseEntity, Sortable, Appearance {
+// Menu için temel tip
+export interface Menu {
+  id: string;
   name: string;
-  business_id: string;
-  businesses?: Business;
-  categories?: Category[];
+  is_active: boolean;
+  sort_order: number;
+  categories: CategoryBase[];
 }
 
-// Category tablosu için type
-export interface Category extends BaseEntity, Sortable, Appearance {
+// Temel kategori tipi
+interface CategoryBase {
+  id: string;
+  name: string;
+  cover_image: string | null;
+  sort_order: number;
+  is_active: boolean;
+}
+
+// Genişletilmiş kategori tipi
+export interface Category extends CategoryBase, BaseEntity, Appearance {
   menu_id: string;
-  name: string;
   products?: Product[];
   product_count?: number;
 }
@@ -157,7 +165,7 @@ export interface CategoryWithProducts extends Category {
   products: ProductWithDetails[];
 }
 
-export interface MenuWithCategories extends Menu {
+export interface MenuWithCategories extends Omit<Menu, 'categories'> {
   categories: CategoryWithProducts[];
 }
 

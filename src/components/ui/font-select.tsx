@@ -9,14 +9,37 @@ const roboto = Roboto({ weight: ['400', '500', '700'], subsets: ['latin'] });
 const montserrat = Montserrat({ subsets: ['latin'] });
 const raleway = Raleway({ subsets: ['latin'] });
 
-
-
 const fonts = [
-    { value: montserrat.className, label: "Montserrat", font: montserrat },
-    { value: inter.className, label: "Inter", font: inter },
-    { value: poppins.className, label: "Poppins", font: poppins },
-    { value: roboto.className, label: "Roboto", font: roboto },
-    { value: raleway.className, label: "Raleway", font: raleway }
+    {
+        value: "montserrat",
+        label: "Montserrat",
+        className: montserrat.className,
+        font: montserrat
+    },
+    {
+        value: "inter",
+        label: "Inter",
+        className: inter.className,
+        font: inter
+    },
+    {
+        value: "poppins",
+        label: "Poppins",
+        className: poppins.className,
+        font: poppins
+    },
+    {
+        value: "roboto",
+        label: "Roboto",
+        className: roboto.className,
+        font: roboto
+    },
+    {
+        value: "raleway",
+        label: "Raleway",
+        className: raleway.className,
+        font: raleway
+    }
 ] as const;
 
 interface FontSelectProps {
@@ -42,7 +65,7 @@ export const FontSelect = ({ value, onChange, label }: FontSelectProps) => {
                         <SelectItem
                             key={font.value}
                             value={font.value}
-                            className={font.value}
+                            className={font.className}
                         >
                             {font.label}
                         </SelectItem>
@@ -53,4 +76,10 @@ export const FontSelect = ({ value, onChange, label }: FontSelectProps) => {
     );
 };
 
-export const defaultFont = fonts[0]; 
+export const defaultFont = fonts[0];
+
+// Font className'ini almak için yardımcı fonksiyon
+export const getFontClassName = (fontValue: string) => {
+    const font = fonts.find(f => f.value === fontValue);
+    return font?.className || defaultFont.className;
+}; 

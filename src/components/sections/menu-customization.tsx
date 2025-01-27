@@ -18,7 +18,7 @@ import { menuSettingsService } from "@/lib/services/menu-settings";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import IPhoneMockup from "../ui/iphone-mockup";
-import { FontSelect, defaultFont } from "@/components/ui/font-select";
+import { FontSelect, defaultFont, getFontClassName } from "@/components/ui/font-select";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import dynamic from 'next/dynamic';
@@ -108,32 +108,49 @@ const Lottie = dynamic(() => import('lottie-react'), {
     ssr: false, // Server-side rendering'i devre dışı bırak
 });
 
-// LoaderPreview bileşenini de client-side'a taşıyalım
+// LoaderPreview bileşenini düzenleyelim
 const LoaderPreview = dynamic(() => Promise.resolve(({ file, url }: { file: File | null, url: string | undefined }) => {
     const [animationData, setAnimationData] = useState<any>(null);
     const [error, setError] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
 
+    // useEffect hook'unu en üstte tutuyoruz ve koşullu çağırmıyoruz
     useEffect(() => {
         const loadAnimation = async () => {
+            if (!file && !url) return;
+
+            setIsLoading(true);
             try {
                 if (file?.type === "application/json") {
                     const text = await file.text();
                     const json = JSON.parse(text);
                     setAnimationData(json);
                     setError(null);
+                } else if (url?.endsWith('.json')) {
+                    const response = await fetch(url);
+                    const data = await response.json();
+                    setAnimationData(data);
+                    setError(null);
                 }
             } catch (err) {
-                setError('JSON dosyası okunamadı');
-                console.error('JSON parse error:', err);
+                setError('Animasyon dosyası yüklenirken bir hata oluştu');
+                console.error('Animation load error:', err);
+            } finally {
+                setIsLoading(false);
             }
         };
 
-        if (file?.type === "application/json") {
-            loadAnimation();
-        }
-    }, [file]);
+        loadAnimation();
+    }, [file, url]);
 
-    // Hata durumunda göster
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center w-full h-full">
+                <Loader2 className="h-6 w-6 animate-spin" />
+            </div>
+        );
+    }
+
     if (error) {
         return (
             <div className="text-sm text-destructive text-center p-2">
@@ -154,7 +171,7 @@ const LoaderPreview = dynamic(() => Promise.resolve(({ file, url }: { file: File
     }
 
     // JSON animasyonu
-    if (file?.type === "application/json" && animationData) {
+    if ((file?.type === "application/json" || url?.endsWith('.json')) && animationData) {
         return (
             <Lottie
                 animationData={animationData}
@@ -164,23 +181,8 @@ const LoaderPreview = dynamic(() => Promise.resolve(({ file, url }: { file: File
         );
     }
 
-    // Mevcut URL
-    if (url) {
-        if (url.endsWith('.json')) {
-            useEffect(() => {
-                fetch(url)
-                    .then(res => res.json())
-                    .then(data => setAnimationData(data));
-            }, [url]);
-
-            return animationData ? (
-                <Lottie
-                    animationData={animationData}
-                    loop
-                    className="w-full h-full p-2"
-                />
-            ) : null;
-        }
+    // Mevcut URL (GIF için)
+    if (url && !url.endsWith('.json')) {
         return (
             <img
                 src={url}
@@ -301,6 +303,24 @@ export const MenuCustomization = ({ businessId }: MenuCustomizationProps) => {
             });
 
             if (updatedSettings) {
+                // Form state'ini güncelle
+                form.reset({
+                    ...updatedSettings,
+                    welcome_title: updatedSettings.welcome_title || "",
+                    welcome_title_font: updatedSettings.welcome_title_font || defaultFont.value,
+                    welcome_text: updatedSettings.welcome_text || "Hoş geldiniz",
+                    welcome_color: updatedSettings.welcome_color || "#000000",
+                    button_text: updatedSettings.button_text || "Menüyü İncele",
+                    button_font: updatedSettings.button_font || defaultFont.value,
+                    button_color: updatedSettings.button_color || "#000000",
+                    button_text_color: updatedSettings.button_text_color || "#FFFFFF",
+                    background_type: updatedSettings.background_type || "image",
+                    background_color: updatedSettings.background_color || "",
+                    background_url: updatedSettings.background_url || "",
+                    logo_url: updatedSettings.logo_url || "",
+                    loader_url: updatedSettings.loader_url || "",
+                });
+
                 toast({
                     title: "Başarılı",
                     description: "Menü ayarları başarıyla kaydedildi.",
@@ -577,7 +597,7 @@ export const MenuCustomization = ({ businessId }: MenuCustomizationProps) => {
                                 />
                             ) : (
                                 <h1
-                                    className={`text-3xl font-bold mb-4 ${form.watch("welcome_title_font") || 'cal-sans'}`}
+                                    className={`text-3xl font-bold mb-4 ${getFontClassName(form.watch("welcome_title_font"))}`}
                                     style={{ color: form.watch("welcome_color") || '#000000' }}
                                     dangerouslySetInnerHTML={{
                                         __html: form.watch("welcome_title") || "Giriş Başlığı"
@@ -594,7 +614,7 @@ export const MenuCustomization = ({ businessId }: MenuCustomizationProps) => {
                             />
 
                             <button
-                                className={`px-6 py-3 rounded-lg transition-all ${form.watch("button_font") || 'cal-sans'} text-sm`}
+                                className={`px-6 py-3 rounded-lg transition-all ${getFontClassName(form.watch("button_font"))} text-sm`}
                                 style={{
                                     backgroundColor: form.watch("button_color") || '#000000',
                                     color: form.watch("button_text_color") || '#FFFFFF',
