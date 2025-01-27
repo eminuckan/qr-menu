@@ -36,6 +36,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useBusinessContext } from "@/lib/contexts/business-context";
 
 interface Business {
     id: string;
@@ -55,6 +56,7 @@ export default function BusinessSettingsPage() {
     const router = useRouter();
     const [editingBusiness, setEditingBusiness] = useState<Business | null>(null);
     const [deletingBusiness, setDeletingBusiness] = useState<Business | null>(null);
+    const { setHasBusiness } = useBusinessContext();
 
     const form = useForm<BusinessFormValues>({
         resolver: zodResolver(businessFormSchema),
@@ -97,6 +99,9 @@ export default function BusinessSettingsPage() {
             // İşletmeleri yeniden yükle
             const data = await BusinessService.getBusinesses();
             setBusinesses(data);
+
+            // Context'i güncelle
+            setHasBusiness(true);
 
             toast({
                 title: "Başarılı",
@@ -150,7 +155,15 @@ export default function BusinessSettingsPage() {
 
             await BusinessService.deleteBusiness(deletingBusiness.id);
 
-            setBusinesses(prev => prev.filter(b => b.id !== deletingBusiness.id));
+            // İşletmeleri güncelle
+            const updatedBusinesses = businesses.filter(b => b.id !== deletingBusiness.id);
+            setBusinesses(updatedBusinesses);
+
+            // Eğer son işletme silindiyse context'i güncelle
+            if (updatedBusinesses.length === 0) {
+                setHasBusiness(false);
+            }
+
             setDeletingBusiness(null);
 
             toast({
@@ -332,9 +345,6 @@ export default function BusinessSettingsPage() {
                             </ul>
                         </div>
                     </div>
-
-
-
 
                     <AlertDialogFooter>
                         <AlertDialogCancel>İptal</AlertDialogCancel>

@@ -227,3 +227,25 @@ export interface MenuSettingsFormValues {
   background_color?: string;
   background_url?: string;
 }
+
+// QR kodu için type
+export interface QRCode extends BaseEntity {
+  business_id: string;
+  name: string;
+  foreground_color: string;
+  background_color: string;
+  logo_url?: string | null;
+  svg_path: string;
+  pdf_path?: string | null;
+  qr_url: string;
+  is_active: boolean;
+}
+
+// QR kod form değerleri için type
+export interface QRCodeFormValues {
+  name: string;
+  business_id: string;
+  foreground_color: string;
+  background_color: string;
+  logo_url?: string;
+}

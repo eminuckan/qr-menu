@@ -1,28 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Store } from "lucide-react";
-import { BusinessService } from "@/lib/services/business-service";
+import { useBusinessContext } from "@/lib/contexts/business-context";
 
 export function BusinessAlert() {
-    const [hasBusiness, setHasBusiness] = useState(true); // Başlangıçta alert'i gösterme
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        const checkBusiness = async () => {
-            try {
-                const result = await BusinessService.hasAnyBusiness();
-                setHasBusiness(result);
-            } catch (error) {
-                console.error('Error checking business:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        checkBusiness();
-    }, []);
+    const { hasBusiness, loading } = useBusinessContext();
 
     if (loading || hasBusiness) return null;
 

@@ -66,6 +66,7 @@ if (!API_KEY || !API_SECRET || !API_CONSUMER) {
 export const ImportService = {
     async importMenuFromAdisyo(
         context: ImportContext,
+        businessId: string,
         onProgress?: (progress: ImportProgress) => void
     ) {
         const supabase = createClient();
@@ -125,6 +126,7 @@ export const ImportService = {
                 .from('menus')
                 .select('*')
                 .eq('name', 'Adisyo Menü')
+                .eq('business_id', businessId)
                 .single();
 
             if (await checkAbort()) return { success: false, aborted: true, stats };
@@ -180,7 +182,8 @@ export const ImportService = {
                         name: 'Adisyo Menü',
                         is_active: true,
                         sort_order: 0,
-                        color: '#ffffff'
+                        color: '#ffffff',
+                        business_id: businessId
                     })
                     .select()
                     .single();

@@ -26,6 +26,7 @@ import {
   DialogTitle,
   DialogDescription,
   DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
@@ -42,7 +43,6 @@ import {
 } from "@/components/ui/form";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
-import { notFound } from "next/navigation";
 import { ImportService, ImportContext } from "@/lib/services/import-service";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { cn } from "@/lib/utils";
@@ -66,6 +66,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { useBusinessContext } from '@/lib/contexts/business-context';
 
 interface Business {
   id: string;
@@ -108,6 +110,8 @@ const formatCountdown = (seconds: number) => {
 // Menüleri işletmelere göre gruplamak için helper fonksiyon
 const groupMenusByBusiness = (menus: Menu[]) => {
   return menus.reduce((groups, menu) => {
+    if (!menu.businesses) return groups;
+
     const businessId = menu.businesses.id;
     if (!groups[businessId]) {
       groups[businessId] = {
@@ -143,7 +147,10 @@ const Page = () => {
   const [showAbortDialog, setShowAbortDialog] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [moveMenuId, setMoveMenuId] = useState<string | null>(null);
+  const [selectedBusinessId, setSelectedBusinessId] = useState<string | null>(null);
+  const [showImportDialog, setShowImportDialog] = useState(false);
   const supabase = createClient();
+  const { hasBusiness } = useBusinessContext();
 
   const form = useForm<MenuFormValues>({
     resolver: zodResolver(menuFormSchema),
@@ -332,76 +339,92 @@ const Page = () => {
   };
 
   const handleImport = async () => {
-    setImporting(true);
-
-    const { data: existingMenu } = await supabase
-      .from('menus')
-      .select('*')
-      .eq('name', 'Adisyo Menü')
-      .single();
-
-    let newMenuId: string | null = null;
-
-    if (!existingMenu) {
-      const { data: newMenu, error: menuError } = await supabase
-        .from('menus')
-        .insert({
-          name: 'Adisyo Menü',
-          is_active: true,
-          sort_order: menus.length + 1,
-          color: '#ffffff'
-        })
-        .select()
-        .single();
-
-      if (menuError) {
-        toast({
-          variant: "destructive",
-          title: "Hata",
-          description: "Menü oluşturulurken bir hata oluştu.",
-        });
-        setImporting(false);
-        return;
-      }
-
-      setMenus(prev => [...prev, {
-        id: newMenu.id,
-        name: newMenu.name,
-        is_active: newMenu.is_active,
-        sort_order: newMenu.sort_order,
-        color: newMenu.color,
-        created_at: newMenu.created_at,
-        business_id: newMenu.business_id,
-        businesses: {
-          id: newMenu.business_id,
-          name: newMenu.businesses.name
-        },
-        cover_image: newMenu.cover_image
-      }]);
-
-      newMenuId = newMenu.id;
-    } else {
-      newMenuId = existingMenu.id;
+    if (!hasBusiness) {
+      toast({
+        variant: "destructive",
+        title: "Hata",
+        description: "Menü içe aktarma için en az bir işletme kaydının olması gerekiyor.",
+      });
+      return;
     }
 
-    setImportContext({
-      menuId: newMenuId,
-      categoryIds: [],
-      aborted: false,
-      paused: false
-    });
+    if (!selectedBusinessId) {
+      toast({
+        variant: "destructive",
+        title: "Hata",
+        description: "Lütfen bir işletme seçin.",
+      });
+      return;
+    }
+
+    setImporting(true);
+    setShowImportDialog(false);
 
     try {
+      // Seçilen işletmede "Adisyo Menü" var mı kontrol et
+      const { data: existingMenu } = await supabase
+        .from('menus')
+        .select('*')
+        .eq('name', 'Adisyo Menü')
+        .eq('business_id', selectedBusinessId)
+        .single();
+
+      let menuId: string;
+
+      if (existingMenu) {
+        menuId = existingMenu.id;
+      } else {
+        // Yeni menü oluştur
+        const { data: newMenu, error: menuError } = await supabase
+          .from('menus')
+          .insert({
+            name: 'Adisyo Menü',
+            is_active: true,
+            sort_order: menus.length + 1,
+            color: '#ffffff',
+            business_id: selectedBusinessId
+          })
+          .select('*, businesses(id, name)')
+          .single();
+
+        if (menuError) {
+          throw new Error('Menü oluşturulurken hata: ' + menuError.message);
+        }
+
+        menuId = newMenu.id;
+
+        // Menüler listesine ekle
+        setMenus(prev => [...prev, {
+          ...newMenu,
+          businesses: newMenu.businesses || {
+            id: selectedBusinessId,
+            name: businesses.find(b => b.id === selectedBusinessId)?.name || ''
+          }
+        }]);
+      }
+
+      // Import context'i güncelle
+      const importContext: ImportContext = {
+        menuId,
+        categoryIds: [],
+        aborted: false,
+        paused: false
+      };
+
+      // Import işlemini başlat
       const result = await ImportService.importMenuFromAdisyo(
-        { menuId: newMenuId, categoryIds: [], aborted: false, paused: false },
+        importContext,
+        selectedBusinessId,
         (progress) => {
           setImportProgress(progress);
         }
       );
 
       if (result.aborted) {
+        // İptal edilirse ve yeni menüyse sil
         if (!existingMenu) {
-          setMenus(prev => prev.filter(item => item.id !== newMenuId));
+          await supabase.from('menus').delete().eq('id', menuId);
+          setMenus(prev => prev.filter(item => item.id !== menuId));
         }
 
         toast({
@@ -412,6 +435,9 @@ const Page = () => {
         return;
       }
 
+      // Başarılı import sonrası menüleri yeniden yükle
+      await getMenus();
+
       toast({
         title: "Menü Aktarımı Başarılı",
         description: `${result.stats.importedCategories}/${result.stats.totalCategories} kategori ve ${result.stats.importedProducts}/${result.stats.totalProducts} ürün aktarıldı.${result.stats.failedItems.categories.length > 0 || result.stats.failedItems.products.length > 0
@@ -421,37 +447,34 @@ const Page = () => {
         variant: "default"
       });
 
-      getMenus();
-
     } catch (error) {
+      console.error('Import hatası:', error);
 
-      if (!existingMenu) {
-        setMenus(prev => prev.filter(item => item.id !== newMenuId));
-      }
-
-      if (error instanceof Error && error.message.includes('rate limit')) {
-        setIsRateLimited(true);
-        const duration = 180;
-        setRateLimitCountdown(duration);
-
-        localStorage.setItem('importRateLimit', JSON.stringify({
-          timestamp: Date.now(),
-          duration: duration
-        }));
-      }
       let errorMessage = "Menü aktarılırken bir hata oluştu";
       if (error instanceof Error) {
         errorMessage = error.message;
+
+        if (error.message.includes('rate limit')) {
+          setIsRateLimited(true);
+          const duration = 180;
+          setRateLimitCountdown(duration);
+
+          localStorage.setItem('importRateLimit', JSON.stringify({
+            timestamp: Date.now(),
+            duration: duration
+          }));
+        }
       }
+
       toast({
         title: "Menü Aktarım Hatası",
         description: errorMessage,
         variant: "destructive"
       });
-      console.error(error);
     } finally {
       setImporting(false);
       setImportProgress(null);
+      setSelectedBusinessId(null);
     }
   };
 
@@ -462,15 +485,29 @@ const Page = () => {
 
   const handleAbortConfirm = async () => {
     try {
+      // Önce import context'i güncelle
       setImportContext(prev => ({ ...prev, aborted: true }));
       setShowAbortDialog(false);
       setIsPaused(false);
 
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // ImportService'e iptal sinyali gönder
+      await ImportService.abortImport({
+        menuId: importContext.menuId,
+        categoryIds: importContext.categoryIds,
+        aborted: true,
+        paused: false
+      });
 
+      // Temizlik işlemleri
+      if (importContext.menuId) {
+        // Yeni oluşturulan menüyü sil
+        await supabase.from('menus').delete().eq('id', importContext.menuId);
+        setMenus(prev => prev.filter(item => item.id !== importContext.menuId!));
+      }
+
+      // State'leri sıfırla
       setImporting(false);
       setImportProgress(null);
-
       setImportContext({
         menuId: null,
         categoryIds: [],
@@ -593,8 +630,9 @@ const Page = () => {
             <Button
               variant="outline"
               className="gap-2"
-              onClick={handleImport}
-              disabled={isRateLimited || importing}
+              onClick={() => setShowImportDialog(true)}
+              disabled={isRateLimited || importing || !hasBusiness}
+              title={!hasBusiness ? "Menü içe aktarma için en az bir işletme kaydının olması gerekiyor" : ""}
             >
               <RefreshCw
                 className={cn("h-5 w-5", {
@@ -612,10 +650,10 @@ const Page = () => {
                 "Adisyodan Menü Getir"
               )}
             </Button>
-            {isRateLimited && (
+            {!hasBusiness && (
               <div className="absolute -bottom-6 left-0 right-0 text-center">
                 <span className="text-xs text-muted-foreground">
-                  API limiti aşıldı
+                  İşletme kaydı gerekiyor
                 </span>
               </div>
             )}
@@ -855,6 +893,51 @@ const Page = () => {
               </SelectContent>
             </Select>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Menü İçe Aktarma</DialogTitle>
+            <DialogDescription>
+              Adisyo'dan içe aktarılacak menünün hangi işletmeye ait olacağını seçin.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label>İşletme</Label>
+              <Select
+                onValueChange={(value) => setSelectedBusinessId(value)}
+                value={selectedBusinessId || undefined}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="İşletme seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                  {businesses.map((business) => (
+                    <SelectItem key={business.id} value={business.id}>
+                      {business.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowImportDialog(false)}
+            >
+              İptal
+            </Button>
+            <Button
+              onClick={handleImport}
+              disabled={!selectedBusinessId}
+            >
+              İçe Aktar
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

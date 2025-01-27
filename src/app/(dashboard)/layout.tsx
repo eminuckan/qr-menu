@@ -6,6 +6,7 @@ import { Store } from "lucide-react";
 import { BusinessService } from "@/lib/services/business-service";
 import { cn } from "@/lib/utils";
 import { BusinessAlert } from "@/components/sections/business-alert";
+import { BusinessProvider } from "@/lib/contexts/business-context";
 
 const geistSans = Geist({
   subsets: ["latin"],
@@ -29,8 +30,10 @@ export default function DashboardLayout({
         <Sidebar />
         <main className="flex-1 ml-16 lg:ml-64 transition-all duration-300">
           <div className="container mx-auto p-6">
-            <BusinessAlert />
-            {children}
+            <BusinessProvider>
+              <BusinessAlert />
+              {children}
+            </BusinessProvider>
           </div>
         </main>
       </div>
