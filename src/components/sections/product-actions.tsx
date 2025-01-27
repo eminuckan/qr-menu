@@ -90,8 +90,11 @@ export const ProductActions = ({
         title: "Başarılı",
         description: "Ürün başarıyla güncellendi",
       });
-      onUpdate();
+
+      await new Promise(resolve => setTimeout(resolve, 100));
       setOpen(false);
+      onUpdate();
+
     } catch (error) {
       console.error('Güncelleme hatası:', error);
       toast({
@@ -104,12 +107,20 @@ export const ProductActions = ({
     }
   };
 
+  const handleOpenChange = (newOpen: boolean) => {
+    if (isSubmitting) return;
+    setOpen(newOpen);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button variant="ghost" size="sm">Düzenle</Button>
       </DialogTrigger>
-      <DialogContent className="max-w-[900px] max-h-[90vh] overflow-y-auto">
+      <DialogContent
+        className="max-w-[900px] max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         <DialogHeader className="flex flex-row items-center justify-between">
           <DialogTitle>Ürünü Düzenle</DialogTitle>
         </DialogHeader>

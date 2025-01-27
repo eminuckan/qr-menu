@@ -24,7 +24,7 @@ export function MenuContent({ menus }: MenuContentProps) {
 
     return (
         <Drawer open={isDrawerOpen} onOpenChange={setDrawerOpen}>
-            <DrawerContent className="h-[90vh]">
+            <DrawerContent className="h-[85vh] mt-[5vh]">
                 <DrawerHeader className="sr-only">
                     <VisuallyHidden>
                         <DrawerTitle>{activeMenu.name}</DrawerTitle>

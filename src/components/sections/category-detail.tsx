@@ -44,6 +44,7 @@ const CategoryDetail = ({ id }: { id: string }) => {
   const [sortedProducts, setSortedProducts] = useState<ProductWithDetails[]>(
     []
   );
+  const [addProductDialogOpen, setAddProductDialogOpen] = useState(false);
 
   const { toast } = useToast();
   const supabase = createClient();
@@ -258,7 +259,11 @@ const CategoryDetail = ({ id }: { id: string }) => {
         description: "Ürün başarıyla eklendi",
       });
 
+      // Dialog'u kapatmadan önce küçük bir gecikme ekle
+      await new Promise(resolve => setTimeout(resolve, 100));
+      setAddProductDialogOpen(false);
       await fetchCategory();
+
       return result;
     } catch (error) {
       console.error('Ürün ekleme hatası:', error);
@@ -269,6 +274,10 @@ const CategoryDetail = ({ id }: { id: string }) => {
       });
       throw error;
     }
+  };
+
+  const handleAddProductDialogChange = (newOpen: boolean) => {
+    setAddProductDialogOpen(newOpen);
   };
 
   const handleProductsDelete = async (productIds: string[]) => {
@@ -387,14 +396,17 @@ const CategoryDetail = ({ id }: { id: string }) => {
             <Plus className="w-4 h-4 mr-2" />
             Kampanyalı Ürün
           </Button>
-          <Dialog>
+          <Dialog open={addProductDialogOpen} onOpenChange={handleAddProductDialogChange}>
             <DialogTrigger asChild>
-              <Button>
+              <Button onClick={() => setAddProductDialogOpen(true)}>
                 <PlusCircle className="w-4 h-4 mr-2" />
                 Ürün Ekle
               </Button>
             </DialogTrigger>
-            <DialogContent className="w-[calc(100%-2rem)] max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-[700px] md:max-w-[800px] lg:max-w-[900px]">
+            <DialogContent
+              className="w-[calc(100%-2rem)] max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-[700px] md:max-w-[800px] lg:max-w-[900px]"
+              onClick={(e) => e.stopPropagation()}
+            >
               <DialogHeader>
                 <DialogTitle className="text-2xl font-bold">
                   Ürün Ekle
@@ -404,9 +416,8 @@ const CategoryDetail = ({ id }: { id: string }) => {
               <ProductForm
                 onSubmit={handleProductSubmit}
                 units={units}
-                onCancel={() => { }}
+                onCancel={() => setAddProductDialogOpen(false)}
               />
-
             </DialogContent>
           </Dialog>
         </div>
