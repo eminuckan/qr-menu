@@ -4,7 +4,7 @@ import { MenuSettings, Menu } from "@/types/database";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { fonts } from '@/app/layout';
+import { fonts } from "@/lib/fonts";
 import { useMenu } from "@/contexts/menu-context";
 
 const Lottie = dynamic(() => import("lottie-react"), { ssr: false });

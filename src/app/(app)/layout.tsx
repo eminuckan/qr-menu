@@ -21,15 +21,6 @@ const raleway = Raleway({
     variable: '--font-raleway'
 });
 
-// Font map'i oluştur
-export const fonts = {
-    inter,
-    poppins,
-    roboto,
-    montserrat,
-    raleway
-} as const;
-
 export default function AppLayout({
     children,
 }: Readonly<{
