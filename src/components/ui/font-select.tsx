@@ -10,7 +10,7 @@ const roboto = Roboto({ weight: ['400', '500', '700'], subsets: ['latin'] });
 const montserrat = Montserrat({ subsets: ['latin'] });
 const raleway = Raleway({ subsets: ['latin'] });
 const austeinScript = localFont({
-    src: './fonts/austein/austein.woff2',
+    src: '../../assets/fonts/austein/austein.woff2',
     display: 'swap',
 })
 
