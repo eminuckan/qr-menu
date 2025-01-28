@@ -352,7 +352,7 @@ const ProductsTable = ({ products, onDelete, onStatusChange, onUpdate, units }: 
             columns={columns}
             data={localProducts}
             searchKey="name"
-            enableRowSelection={false}
+            enableRowSelection={true}
             onRowSelectionChange={setRowSelection}
             components={{
               row: ({ children, row }) => (
@@ -368,7 +368,7 @@ const ProductsTable = ({ products, onDelete, onStatusChange, onUpdate, units }: 
             }}
             initialState={{
               pagination: {
-                pageSize: 1000 // Çok yüksek bir sayı vererek tüm ürünleri tek sayfada göster
+                pageSize: 1000
               }
             }}
           />
