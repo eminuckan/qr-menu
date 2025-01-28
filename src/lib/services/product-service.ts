@@ -18,27 +18,16 @@ const productQuery = createClient()
   `);
 
 export type ProductWithRelations = Tables<'products'> & {
-  product_allergens: {
-    id: string;
-    allergen: Enums<'allergen_type'>;
-  }[];
-  product_tags: {
-    id: string;
-    tag_type: Enums<'product_tag_type'>;
-  }[];
-  product_prices: {
-    id: string;
-    price: number;
-    unit: {
-      id: string;
-      name: string;
-    };
-  }[];
-  product_images: {
-    id: string;
-    image_url: string;
-    is_cover: boolean;
-  }[];
+  product_allergens: (Tables<'product_allergens'> & {
+    allergen: Database['public']['Enums']['allergen_type'];
+  })[];
+  product_tags: (Tables<'product_tags'> & {
+    tag_type: Database['public']['Enums']['product_tag_type'];
+  })[];
+  product_prices: (Tables<'product_prices'> & {
+    unit: Tables<'units'>;
+  })[];
+  product_images: Tables<'product_images'>[];
 };
 
 interface CreateProductData extends InsertTables<'products'> {
@@ -173,7 +162,7 @@ export class ProductService {
     if (allergens.length > 0) {
       const allergenData: InsertTables<'product_allergens'>[] = allergens.map(allergen => ({
         product_id: productId,
-        allergen: allergen
+        allergen
       }));
 
       const { error } = await this.supabase

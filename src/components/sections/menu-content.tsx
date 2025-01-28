@@ -125,7 +125,7 @@ export function MenuContent({ menu, businessName }: MenuContentProps) {
                                     <div className="w-24 h-24 rounded-lg overflow-hidden flex-shrink-0">
                                         {product.product_images?.find(img => img.is_cover)?.image_url ? (
                                             <img
-                                                src={product.product_images.find(img => img.is_cover)?.image_url}
+                                                src={(product.product_images.find(img => img.is_cover)?.image_url ?? "/no-image.jpg") as string}
                                                 alt={product.name}
                                                 className="w-full h-full object-cover"
                                             />
@@ -214,7 +214,7 @@ export function MenuContent({ menu, businessName }: MenuContentProps) {
                             <div className="w-full h-48 mb-6 rounded-lg overflow-hidden">
                                 {selectedProduct?.product_images?.find(img => img.is_cover)?.image_url ? (
                                     <img
-                                        src={selectedProduct.product_images.find(img => img.is_cover)?.image_url}
+                                        src={(selectedProduct.product_images.find(img => img.is_cover)?.image_url ?? "/no-image.jpg") as string}
                                         alt={selectedProduct.name}
                                         className="w-full h-full object-cover"
                                     />

@@ -105,68 +105,102 @@ export class ImportService {
         let updated = false;
         let priceUpdated = false;
 
-        // Temel ürün bilgilerini karşılaştır
-        const updates: Partial<Tables['products']['Update']> = {};
-        if (existingProduct.name !== adisyoProduct.productName) updates.name = adisyoProduct.productName;
-        if (existingProduct.kdv_rate !== adisyoProduct.taxRate) updates.kdv_rate = adisyoProduct.taxRate;
+        try {
+            // Temel ürün bilgilerini karşılaştır
+            const updates: Partial<Tables['products']['Update']> = {};
 
-        // Eğer güncellenecek alan varsa güncelle
-        if (Object.keys(updates).length > 0) {
-            const { error } = await this.supabase
-                .from('products')
-                .update(updates)
-                .eq('id', existingProduct.id);
+            // Sadece değişen alanları güncelle
+            if (existingProduct.name !== adisyoProduct.productName) {
+                console.log(`Ürün adı güncelleniyor: ${existingProduct.name} -> ${adisyoProduct.productName}`);
+                updates.name = adisyoProduct.productName;
+            }
 
-            if (error) throw error;
-            updated = true;
-        }
+            if (existingProduct.kdv_rate !== adisyoProduct.taxRate) {
+                console.log(`KDV oranı güncelleniyor: ${existingProduct.kdv_rate} -> ${adisyoProduct.taxRate}`);
+                updates.kdv_rate = adisyoProduct.taxRate;
+            }
 
-        // Fiyat kontrolü ve güncelleme
-        const defaultUnit = adisyoProduct.productUnits.find(u => u.isDefault);
-        if (defaultUnit) {
-            const unitId = await this.findOrCreateUnit(defaultUnit.unitName);
-            const defaultPrice = defaultUnit.prices.find(p => p.orderType === 1);
-            const price = defaultPrice?.price || 0;
+            // Eğer güncellenecek alan varsa güncelle
+            if (Object.keys(updates).length > 0) {
+                console.log(`Ürün güncelleniyor (${existingProduct.id}):`, updates);
+                const { error } = await this.supabase
+                    .from('products')
+                    .update(updates)
+                    .eq('id', existingProduct.id);
 
-            // Mevcut fiyatı getir
-            const { data: existingPrices, error: priceError } = await this.supabase
-                .from('product_prices')
-                .select('*')
-                .eq('product_id', existingProduct.id);
+                if (error) {
+                    console.error('Ürün güncelleme hatası:', error);
+                    throw error;
+                }
+                updated = true;
+            }
 
-            if (priceError) throw priceError;
+            // Fiyat kontrolü ve güncelleme
+            const defaultUnit = adisyoProduct.productUnits.find(u => u.isDefault);
+            if (defaultUnit) {
+                const unitId = await this.findOrCreateUnit(defaultUnit.unitName);
+                const defaultPrice = defaultUnit.prices.find(p => p.orderType === 1);
+                const newPrice = defaultPrice?.price || 0;
 
-            // Aynı birime ait fiyat var mı kontrol et
-            const existingPrice = existingPrices?.find(p => p.unit_id === unitId);
+                console.log(`Fiyat kontrolü yapılıyor - Ürün: ${existingProduct.name}, Birim: ${defaultUnit.unitName}`);
 
-            if (existingPrice) {
-                // Fiyat değişmişse güncelle
-                if (existingPrice.price !== price) {
-                    console.log(`Fiyat güncelleniyor: ${existingPrice.price} -> ${price}`);
+                // Mevcut fiyatları getir
+                const { data: existingPrices, error: priceError } = await this.supabase
+                    .from('product_prices')
+                    .select('*')
+                    .eq('product_id', existingProduct.id);
+
+                if (priceError) {
+                    console.error('Fiyat sorgulama hatası:', priceError);
+                    throw priceError;
+                }
+
+                // Aynı birime ait fiyat var mı kontrol et
+                const existingPrice = existingPrices?.find(p => p.unit_id === unitId);
+
+                if (existingPrice) {
+                    // Fiyat değişmişse güncelle
+                    if (existingPrice.price !== newPrice) {
+                        console.log(`Fiyat güncelleniyor - Ürün: ${existingProduct.name}`);
+                        console.log(`Eski fiyat: ${existingPrice.price}, Yeni fiyat: ${newPrice}`);
+
+                        const { error } = await this.supabase
+                            .from('product_prices')
+                            .update({ price: newPrice })
+                            .eq('id', existingPrice.id);
+
+                        if (error) {
+                            console.error('Fiyat güncelleme hatası:', error);
+                            throw error;
+                        }
+                        priceUpdated = true;
+                    } else {
+                        console.log(`Fiyat değişmemiş - Ürün: ${existingProduct.name}, Fiyat: ${newPrice}`);
+                    }
+                } else {
+                    // Yeni fiyat ekle
+                    console.log(`Yeni fiyat ekleniyor - Ürün: ${existingProduct.name}, Fiyat: ${newPrice}`);
                     const { error } = await this.supabase
                         .from('product_prices')
-                        .update({ price })
-                        .eq('id', existingPrice.id);
+                        .insert({
+                            product_id: existingProduct.id,
+                            unit_id: unitId,
+                            price: newPrice
+                        });
 
-                    if (error) throw error;
+                    if (error) {
+                        console.error('Yeni fiyat ekleme hatası:', error);
+                        throw error;
+                    }
                     priceUpdated = true;
                 }
-            } else {
-                // Yeni fiyat ekle
-                const { error } = await this.supabase
-                    .from('product_prices')
-                    .insert({
-                        product_id: existingProduct.id,
-                        unit_id: unitId,
-                        price
-                    });
-
-                if (error) throw error;
-                priceUpdated = true;
             }
-        }
 
-        return { updated, priceUpdated };
+            return { updated, priceUpdated };
+        } catch (error) {
+            console.error('Ürün güncelleme işlemi sırasında hata:', error);
+            throw error;
+        }
     }
 
     static async importMenuFromAdisyo(

@@ -20,6 +20,7 @@ import { HTML5Backend } from 'react-dnd-html5-backend'
 import { useDrag, useDrop } from 'react-dnd'
 import { ProductWithRelations } from "@/lib/services/product-service";
 import Image from "next/image";
+import { Database } from "@/lib/types/supabase";
 
 interface DraggableHandleProps {
   dragRef: React.RefObject<HTMLDivElement | null>;
@@ -242,7 +243,7 @@ const ProductsTable = ({ products, onDelete, onStatusChange, onUpdate, units }: 
           <div className="flex items-center gap-3 py-2">
             <div className="relative w-24 h-24 rounded-md overflow-hidden">
               <Image
-                src={coverImage || "/no-image.jpg"}
+                src={(coverImage ?? "/no-image.jpg") as string}
                 alt={name}
                 fill
                 className="object-cover"
@@ -262,8 +263,8 @@ const ProductsTable = ({ products, onDelete, onStatusChange, onUpdate, units }: 
         if (!allergens?.length) return null;
         return (
           <div className="flex flex-wrap gap-1">
-            {allergens.map((allergen: Tables<'product_allergens'>, index: number) => (
-              <Badge key={index} variant="outline">
+            {allergens.map((allergen) => (
+              <Badge key={allergen.id} variant="outline">
                 {AllergenLabels[allergen.allergen as keyof typeof AllergenLabels]}
               </Badge>
             ))}
@@ -279,8 +280,8 @@ const ProductsTable = ({ products, onDelete, onStatusChange, onUpdate, units }: 
         if (!tags?.length) return null;
         return (
           <div className="flex flex-wrap gap-1">
-            {tags.map((tag: Tables<'product_tags'>, index: number) => (
-              <Badge key={index} variant="secondary">
+            {tags.map((tag) => (
+              <Badge key={tag.id} variant="secondary">
                 {ProductTagLabels[tag.tag_type as keyof typeof ProductTagLabels]}
               </Badge>
             ))}
@@ -296,8 +297,8 @@ const ProductsTable = ({ products, onDelete, onStatusChange, onUpdate, units }: 
         if (!prices?.length) return null;
         return (
           <div className="flex flex-col gap-1">
-            {prices.map((price: Tables<'product_prices'> & { unit: Tables<'units'> }, index: number) => (
-              <div key={index} className="flex items-center gap-1">
+            {prices.map((price) => (
+              <div key={price.id} className="flex items-center gap-1">
                 <span>{formatPrice(price.price)}</span>
                 <span className="text-muted-foreground">
                   / {price.unit.name}
