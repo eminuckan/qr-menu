@@ -3,8 +3,8 @@
 import { useState, useRef, useEffect } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { useForm } from "react-hook-form";
-import { QRCodeFormValues, Business, QRCode } from "@/types/database";
-import { QRService } from "@/lib/services/qr-service";
+import { Tables } from "@/lib/types/supabase";
+import { QRService, QRCodeFormValues } from "@/lib/services/qr-service";
 import { BusinessService } from "@/lib/services/business-service";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { HexColorPicker } from "react-colorful";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import jsPDF from 'jspdf';
@@ -84,8 +84,8 @@ const ColorPicker = ({ color, onChange, label }: { color: string; onChange: (col
 
 // Props tipini güncelle
 interface QRCustomizationProps {
-    editingQR?: QRCode | null;
-    selectedBusiness: Business | null;
+    editingQR?: Tables<'qr_codes'> | null;
+    selectedBusiness: Tables<'businesses'> | null;
     onCancel?: () => void;
     onSave?: () => void;
 }
@@ -94,10 +94,11 @@ export const QRCustomization = ({ editingQR, selectedBusiness, onCancel, onSave 
     const [previewUrl, setPreviewUrl] = useState<string>("");
     const [isLoading, setIsLoading] = useState(false);
     const qrRef = useRef<HTMLDivElement>(null);
-    const [savedQRCodes, setSavedQRCodes] = useState<QRCode[]>([]);
+    const [savedQRCodes, setSavedQRCodes] = useState<Tables<'qr_codes'>[]>([]);
     const [logoFile, setLogoFile] = useState<File | null>(null);
     const [logoPreviewUrl, setLogoPreviewUrl] = useState<string>("");
     const [isUploading, setIsUploading] = useState(false);
+    const { toast } = useToast();
 
     const form = useForm<QRCodeFormValues>({
         defaultValues: {

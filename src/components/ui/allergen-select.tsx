@@ -9,7 +9,28 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
-import { AllergenType, AllergenLabels } from "@/types/database"
+import { Tables } from "@/lib/types/supabase"
+
+// Alerjen tiplerini Supabase'den gelen tiplerle eşleştir
+type AllergenType = Tables<'product_allergens'>['allergen']
+
+// Alerjen etiketlerini tanımla
+const AllergenLabels: Record<AllergenType, string> = {
+  'gluten': 'Gluten',
+  'shellfish': 'Kabuklu Deniz Ürünleri',
+  'fish': 'Balık',
+  'eggs': 'Yumurta',
+  'dairy': 'Süt Ürünleri',
+  'nuts': 'Kuruyemiş',
+  'peanuts': 'Fıstık',
+  'wheat': 'Buğday',
+  'sulfur_dioxide': 'Sülfür Dioksit',
+  'mustard': 'Hardal',
+  'sesame': 'Susam',
+  'soy': 'Soya',
+  'lupin': 'Acı Bakla',
+  'celery': 'Kereviz'
+} as const;
 
 interface AllergenSelectProps {
   selected: AllergenType[]
@@ -56,8 +77,8 @@ export function AllergenSelect({
       </PopoverTrigger>
       <PopoverContent className="w-full p-2" align="start">
         <div className="grid grid-cols-2 gap-2">
-          {Object.entries(AllergenLabels).map(([key, label]) => {
-            const isSelected = selected.includes(key as AllergenType)
+          {(Object.entries(AllergenLabels) as [AllergenType, string][]).map(([key, label]) => {
+            const isSelected = selected.includes(key)
             return (
               <Button
                 key={key}
@@ -67,11 +88,10 @@ export function AllergenSelect({
                   isSelected && "bg-accent"
                 )}
                 onClick={() => {
-                  const allergen = key as AllergenType
                   onChange(
-                    selected.includes(allergen)
-                      ? selected.filter((a) => a !== allergen)
-                      : [...selected, allergen]
+                    selected.includes(key)
+                      ? selected.filter((a) => a !== key)
+                      : [...selected, key]
                   )
                 }}
               >

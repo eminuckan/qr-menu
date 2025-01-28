@@ -1,7 +1,14 @@
 import { createClient } from "../supabase/client";
-import { QRCode, QRCodeFormValues } from "@/types/database";
+import { Tables } from "../types/supabase";
 import { jsPDF } from "jspdf";
-import { Business } from "@/types/database";
+
+export interface QRCodeFormValues {
+    name: string;
+    foreground_color: string;
+    background_color: string;
+    business_id: string;
+    logo_url?: string;
+}
 
 export const QRService = {
     async uploadLogo(businessId: string, file: File) {
@@ -19,7 +26,13 @@ export const QRService = {
         return data.path;
     },
 
-    async createQRCode(values: QRCodeFormValues, svgString: string, selectedBusiness: Business, pdfBlob?: Blob, logoFile?: File) {
+    async createQRCode(
+        values: QRCodeFormValues,
+        svgString: string,
+        selectedBusiness: Tables<'businesses'>,
+        pdfBlob?: Blob,
+        logoFile?: File
+    ) {
         const supabase = createClient();
         const timestamp = Date.now();
 
@@ -55,7 +68,7 @@ export const QRService = {
 
             // SVG'yi yüksek çözünürlüklü canvas'a çevir
             const canvas = document.createElement('canvas');
-            canvas.width = 1024; // Daha yüksek çözünürlük
+            canvas.width = 1024;
             canvas.height = 1024;
             const ctx = canvas.getContext('2d');
 
@@ -121,7 +134,7 @@ export const QRService = {
                     logo_url: logoPublicUrl,
                     qr_url: `${process.env.NEXT_PUBLIC_APP_URL}/qr-menu/${selectedBusiness.slug}`,
                     is_active: true
-                })
+                } satisfies Omit<Tables<'qr_codes'>, 'id' | 'created_at' | 'updated_at'>)
                 .select()
                 .single();
 
@@ -141,7 +154,7 @@ export const QRService = {
         return data.publicUrl;
     },
 
-    async getQRCodes(businessId: string) {
+    async getQRCodes(businessId: string): Promise<Tables<'qr_codes'>[]> {
         const supabase = createClient();
 
         const { data, error } = await supabase
@@ -154,7 +167,7 @@ export const QRService = {
         return data;
     },
 
-    async getQRCode(id: string) {
+    async getQRCode(id: string): Promise<Tables<'qr_codes'>> {
         const supabase = createClient();
 
         const { data, error } = await supabase
@@ -167,7 +180,7 @@ export const QRService = {
         return data;
     },
 
-    async updateQRCode(id: string, values: Partial<QRCodeFormValues>) {
+    async updateQRCode(id: string, values: Partial<QRCodeFormValues>): Promise<Tables<'qr_codes'>> {
         const supabase = createClient();
 
         const { data, error } = await supabase

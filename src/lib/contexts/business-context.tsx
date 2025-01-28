@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { BusinessService } from '@/lib/services/business-service';
+import { Tables } from '@/lib/types/supabase';
 
 interface BusinessContextType {
     hasBusiness: boolean;
@@ -18,10 +19,11 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         const checkBusiness = async () => {
             try {
-                const result = await BusinessService.hasAnyBusiness();
-                setHasBusiness(result);
+                const businesses = await BusinessService.getBusinesses();
+                setHasBusiness(businesses.length > 0);
             } catch (error) {
                 console.error('Error checking business:', error);
+                setHasBusiness(false);
             } finally {
                 setLoading(false);
             }

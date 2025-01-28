@@ -8,22 +8,26 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle, X, UploadCloud } from "lucide-react";
+import { AlertCircle, X, UploadCloud, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { menuSettingsSchema, type MenuSettingsFormValues } from "@/lib/validations/menu-settings";
-import { menuSettingsService } from "@/lib/services/menu-settings";
+import { menuSettingsSchema } from "@/lib/validations/menu-settings";
+import { MenuSettingsService } from "@/lib/services/menu-settings-service";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import IPhoneMockup from "../ui/iphone-mockup";
 import { FontSelect, defaultFont, getFontClassName } from "@/components/ui/font-select";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
 import dynamic from 'next/dynamic';
 import { useLottie } from "lottie-react";
 import { Loading } from "@/components/ui/loading";
+import { Database } from "@/lib/types/supabase";
+import { z } from "zod";
+
+type Tables = Database['public']['Tables']
+type MenuSettingsFormValues = z.infer<typeof menuSettingsSchema>;
 
 const colorOptions = [
     { value: "#000000", label: "Siyah" },
@@ -214,9 +218,9 @@ export const MenuCustomization = ({ businessId }: MenuCustomizationProps) => {
         defaultValues: async () => {
             try {
                 setIsLoading(true);
-                const settings = await menuSettingsService.getMenuSettings(businessId);
+                const settings = await MenuSettingsService.getMenuSettings(businessId);
                 return {
-                    ...settings,
+                    business_id: businessId,
                     welcome_title: settings.welcome_title || "",
                     welcome_title_font: settings.welcome_title_font || defaultFont.value,
                     welcome_text: settings.welcome_text || "Hoş geldiniz",
@@ -225,12 +229,11 @@ export const MenuCustomization = ({ businessId }: MenuCustomizationProps) => {
                     button_font: settings.button_font || defaultFont.value,
                     button_color: settings.button_color || "#000000",
                     button_text_color: settings.button_text_color || "#FFFFFF",
-                    background_type: settings.background_type || "image",
+                    background_type: (settings.background_type || "image") as "color" | "image",
                     background_color: settings.background_color || "",
                     background_url: settings.background_url || "",
                     logo_url: settings.logo_url || "",
                     loader_url: settings.loader_url || "",
-                    business_id: businessId
                 };
             } catch (error) {
                 toast({
@@ -248,7 +251,11 @@ export const MenuCustomization = ({ businessId }: MenuCustomizationProps) => {
                     button_font: defaultFont.value,
                     button_color: "#000000",
                     button_text_color: "#FFFFFF",
-                    background_type: "image"
+                    background_type: "image",
+                    background_color: "",
+                    background_url: "",
+                    logo_url: "",
+                    loader_url: "",
                 };
             } finally {
                 setIsLoading(false);
@@ -264,7 +271,7 @@ export const MenuCustomization = ({ businessId }: MenuCustomizationProps) => {
         try {
             // Dosya yüklemeleri
             if (selectedLogo) {
-                const logoUrl = await menuSettingsService.uploadFile(
+                const logoUrl = await MenuSettingsService.uploadFile(
                     businessId,
                     selectedLogo,
                     "logo",
@@ -274,7 +281,7 @@ export const MenuCustomization = ({ businessId }: MenuCustomizationProps) => {
             }
 
             if (selectedLoader) {
-                const loaderUrl = await menuSettingsService.uploadFile(
+                const loaderUrl = await MenuSettingsService.uploadFile(
                     businessId,
                     selectedLoader,
                     "loader",
@@ -285,7 +292,7 @@ export const MenuCustomization = ({ businessId }: MenuCustomizationProps) => {
 
             // Sadece image tipinde background_url güncelle
             if (selectedFile && data.background_type === "image") {
-                const backgroundUrl = await menuSettingsService.uploadFile(
+                const backgroundUrl = await MenuSettingsService.uploadFile(
                     businessId,
                     selectedFile,
                     "background",
@@ -297,7 +304,7 @@ export const MenuCustomization = ({ businessId }: MenuCustomizationProps) => {
             }
 
             // business_id'yi ekleyerek ayarları güncelle
-            const updatedSettings = await menuSettingsService.updateMenuSettings(businessId, {
+            const updatedSettings = await MenuSettingsService.updateMenuSettings(businessId, {
                 ...data,
                 business_id: businessId
             });
@@ -305,7 +312,7 @@ export const MenuCustomization = ({ businessId }: MenuCustomizationProps) => {
             if (updatedSettings) {
                 // Form state'ini güncelle
                 form.reset({
-                    ...updatedSettings,
+                    business_id: businessId,
                     welcome_title: updatedSettings.welcome_title || "",
                     welcome_title_font: updatedSettings.welcome_title_font || defaultFont.value,
                     welcome_text: updatedSettings.welcome_text || "Hoş geldiniz",
@@ -314,7 +321,7 @@ export const MenuCustomization = ({ businessId }: MenuCustomizationProps) => {
                     button_font: updatedSettings.button_font || defaultFont.value,
                     button_color: updatedSettings.button_color || "#000000",
                     button_text_color: updatedSettings.button_text_color || "#FFFFFF",
-                    background_type: updatedSettings.background_type || "image",
+                    background_type: (updatedSettings.background_type || "image") as "color" | "image",
                     background_color: updatedSettings.background_color || "",
                     background_url: updatedSettings.background_url || "",
                     logo_url: updatedSettings.logo_url || "",

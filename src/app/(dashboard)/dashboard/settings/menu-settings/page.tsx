@@ -5,14 +5,14 @@ import { useRouter } from "next/navigation";
 import { MenuCustomization } from "@/components/sections/menu-customization";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { menuSettingsService } from "@/lib/services/menu-settings";
+import { MenuSettingsService } from "@/lib/services/menu-settings-service";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Business } from "@/types/database";
+import { Tables } from "@/lib/types/supabase";
 import { BusinessService } from "@/lib/services/business-service";
 import { Loading } from "@/components/ui/loading";
 
 export default function MenuSettingsPage() {
-    const [businesses, setBusinesses] = useState<Business[]>([]);
+    const [businesses, setBusinesses] = useState<Tables<'businesses'>[]>([]);
     const [selectedBusinessId, setSelectedBusinessId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const { toast } = useToast();

@@ -1,77 +1,142 @@
 "use client"
+
+import { Tables } from "@/lib/types/supabase";
+import { DataTable } from "@/components/ui/data-table";
+import { ColumnDef, RowSelectionState, Row } from "@tanstack/react-table";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import { ProductActions } from "./product-actions";
+import { Badge } from "@/components/ui/badge";
+import { AllergenLabels, ProductTagLabels } from "@/lib/constants";
+import { formatPrice } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { DataTable } from "@/components/ui/data-table";
 import { Trash, GripVertical } from "lucide-react";
-import { ColumnDef, RowSelectionState } from "@tanstack/react-table";
-import type { Product, Unit, ProductWithDetails } from "@/types/database";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { DndProvider } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
 import { useDrag, useDrop } from 'react-dnd'
-import { ProductActions } from "./product-actions";
-import { ProductPrice } from "./product-price";
-import { ProductStatus } from "./product-status";
+import { ProductWithRelations } from "@/lib/services/product-service";
 import Image from "next/image";
 
-interface ProductsTableProps {
-  products: ProductWithDetails[];
-  units: Unit[];
-  onDelete?: (selectedIds: string[]) => void;
-  onAdd?: (product: Partial<Product>) => void;
-  onStatusChange?: (productId: string, newStatus: boolean) => void;
-  onUpdate: () => void;
+interface DraggableHandleProps {
+  dragRef: React.RefObject<HTMLDivElement | null>;
+  isDragging: boolean;
+}
+
+interface ExtendedRow extends Row<ProductWithRelations> {
+  dragRef?: React.RefObject<HTMLDivElement | null>;
+  isDragging?: boolean;
 }
 
 interface DraggableRowProps {
-  index: number
-  moveRow: (dragIndex: number, hoverIndex: number) => void
-  children: React.ReactNode
+  index: number;
+  moveRow: (dragIndex: number, hoverIndex: number) => void;
+  onDragEnd: (dragIndex: number, hoverIndex: number) => void;
+  children: React.ReactNode;
+  row: ExtendedRow;
 }
 
-const DraggableRow = ({ index, moveRow, children }: DraggableRowProps) => {
+const DraggableHandle = ({ dragRef, isDragging }: DraggableHandleProps) => {
+  return (
+    <div
+      ref={dragRef}
+      className={`cursor-grab active:cursor-grabbing ${isDragging ? 'opacity-50' : ''}`}
+    >
+      <GripVertical className="h-4 w-4 text-muted-foreground" />
+    </div>
+  );
+};
+
+const DraggableRow = ({ index, moveRow, onDragEnd, children, row }: DraggableRowProps) => {
   const dragDropRef = useRef<HTMLTableRowElement>(null);
-  const [{ isDragging }, drag] = useDrag({
+  const dragHandleRef = useRef<HTMLDivElement>(null);
+
+  const [{ isDragging }, drag, preview] = useDrag({
     type: 'ROW',
     item: { index },
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
-  });
-
-  const [, drop] = useDrop({
-    accept: 'ROW',
-    hover: (draggedItem: { index: number }) => {
-      if (draggedItem.index !== index) {
-        moveRow(draggedItem.index, index);
-        draggedItem.index = index;
+    end: (item, monitor) => {
+      const dropResult = monitor.getDropResult();
+      if (item && dropResult) {
+        onDragEnd(item.index, index);
       }
     },
   });
 
-  drag(drop(dragDropRef));
+  const [, drop] = useDrop({
+    accept: 'ROW',
+    hover: (draggedItem: { index: number }, monitor) => {
+      if (!dragDropRef.current) {
+        return;
+      }
+
+      const dragIndex = draggedItem.index;
+      const hoverIndex = index;
+
+      if (dragIndex === hoverIndex) {
+        return;
+      }
+
+      const hoverBoundingRect = dragDropRef.current.getBoundingClientRect();
+      const hoverMiddleY = (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2;
+      const clientOffset = monitor.getClientOffset();
+      const hoverClientY = clientOffset!.y - hoverBoundingRect.top;
+
+      if (dragIndex < hoverIndex && hoverClientY < hoverMiddleY) {
+        return;
+      }
+
+      if (dragIndex > hoverIndex && hoverClientY > hoverMiddleY) {
+        return;
+      }
+
+      moveRow(dragIndex, hoverIndex);
+      draggedItem.index = hoverIndex;
+    },
+  });
+
+  // Sadece handle'ı sürüklenebilir yap
+  drag(dragHandleRef);
+  // Tüm row'u drop target yap
+  drop(preview(dragDropRef));
+
+  // row objesine referansları ekle
+  row.dragRef = dragHandleRef;
+  row.isDragging = isDragging;
 
   return (
     <tr
       ref={dragDropRef}
-      className={`${isDragging ? 'opacity-50 bg-muted' : ''}`}
+      className={`${isDragging ? 'opacity-50 bg-muted' : ''} transition-colors even:bg-muted/50`}
+      style={{ touchAction: 'none' }}
     >
       {children}
     </tr>
   );
 };
 
-const ProductsTable = ({ products: initialProducts, onDelete, onAdd, onStatusChange, onUpdate, units }: ProductsTableProps) => {
+interface ProductsTableProps {
+  products: ProductWithRelations[];
+  units: Tables<'units'>[];
+  onStatusChange: (productId: string, newStatus: boolean) => Promise<void>;
+  onUpdate: () => Promise<void>;
+  onDelete: (productIds: string[]) => Promise<void>;
+}
+
+const ProductsTable = ({ products, onDelete, onStatusChange, onUpdate, units }: ProductsTableProps) => {
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-  const [localProducts, setLocalProducts] = useState(initialProducts);
+  const [localProducts, setLocalProducts] = useState(products);
   const { toast } = useToast();
   const supabase = createClient();
 
   useEffect(() => {
-    setLocalProducts(initialProducts);
-  }, [initialProducts]);
+    setLocalProducts(products);
+  }, [products]);
 
   const handleStatusChange = async (productId: string, newStatus: boolean) => {
     try {
@@ -113,30 +178,25 @@ const ProductsTable = ({ products: initialProducts, onDelete, onAdd, onStatusCha
 
   const moveRow = useCallback(
     async (dragIndex: number, hoverIndex: number) => {
+      const draggedProduct = localProducts[dragIndex];
+      const updatedProducts = [...localProducts];
+      updatedProducts.splice(dragIndex, 1);
+      updatedProducts.splice(hoverIndex, 0, draggedProduct);
+
+      setLocalProducts(updatedProducts);
+
       try {
-        const draggedProduct = localProducts[dragIndex];
-        const updatedProducts = [...localProducts];
-        updatedProducts.splice(dragIndex, 1);
-        updatedProducts.splice(hoverIndex, 0, draggedProduct);
-
-        setLocalProducts(updatedProducts);
-
         const { error } = await supabase.rpc('update_products_order', {
           p_product_ids: updatedProducts.map(p => p.id),
-          p_category_id: draggedProduct.category_id
+          p_category_id: draggedProduct.category_id ?? ""
         });
 
         if (error) {
           throw error;
         }
-
-        toast({
-          title: "Sıralama güncellendi",
-          description: `"${draggedProduct.name}" ${dragIndex + 1}. sıradan ${hoverIndex + 1}. sıraya taşındı`,
-        });
       } catch (error: any) {
         console.error('Error details:', error);
-        setLocalProducts(initialProducts);
+        setLocalProducts(products);
         toast({
           variant: "destructive",
           title: "Hata",
@@ -144,66 +204,143 @@ const ProductsTable = ({ products: initialProducts, onDelete, onAdd, onStatusCha
         });
       }
     },
-    [localProducts, initialProducts, supabase, toast]
+    [localProducts, products, supabase, toast]
   );
 
-  const columns: ColumnDef<ProductWithDetails>[] = [
+  const handleDragEnd = useCallback(
+    (dragIndex: number, hoverIndex: number) => {
+      const draggedProduct = localProducts[dragIndex];
+      toast({
+        title: "Sıralama güncellendi",
+        description: `"${draggedProduct.name}" ${dragIndex + 1}. sıradan ${hoverIndex + 1}. sıraya taşındı`,
+      });
+    },
+    [localProducts, toast]
+  );
+
+  const columns: ColumnDef<ProductWithRelations>[] = [
     {
-      id: "sort",
-      size: 30,
-      cell: () => (
-        <div className="w-6 cursor-move text-muted-foreground/50">
-          <GripVertical className="h-4 w-4" />
-        </div>
-      ),
+      id: "reorder",
+      size: 40,
+      header: () => null,
+      cell: ({ row }) => {
+        const extendedRow = row as ExtendedRow;
+        return <DraggableHandle dragRef={extendedRow.dragRef!} isDragging={extendedRow.isDragging || false} />;
+      },
+      enableSorting: false,
+      enableHiding: false,
     },
     {
-      id: "image",
-      header: "Fotoğraf",
+      accessorKey: "name",
+      header: "Ürün Adı",
       cell: ({ row }) => {
-        const coverImage = row.original.product_images?.find(img => img.is_cover);
+        const name = row.getValue("name") as string;
+        const product = row.original;
+        const coverImage = product.product_images?.find(img => img.is_cover)?.image_url;
+
         return (
-          <div className="relative w-12 h-12">
-            <Image
-              src={coverImage?.image_url || "/no-image.jpg"}
-              alt={row.original.name}
-              fill
-              className="object-cover rounded-lg"
-            />
+          <div className="flex items-center gap-3 py-2">
+            <div className="relative w-24 h-24 rounded-md overflow-hidden">
+              <Image
+                src={coverImage || "/no-image.jpg"}
+                alt={name}
+                fill
+                className="object-cover"
+                sizes="96px"
+              />
+            </div>
+            <span className="font-medium">{name}</span>
           </div>
         );
       },
     },
     {
-      accessorKey: "name",
-      header: "Ürün Adı",
+      accessorKey: "product_allergens",
+      header: "Alerjenler",
+      cell: ({ row }) => {
+        const allergens = row.original.product_allergens;
+        if (!allergens?.length) return null;
+        return (
+          <div className="flex flex-wrap gap-1">
+            {allergens.map((allergen: Tables<'product_allergens'>, index: number) => (
+              <Badge key={index} variant="outline">
+                {AllergenLabels[allergen.allergen as keyof typeof AllergenLabels]}
+              </Badge>
+            ))}
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "product_tags",
+      header: "Etiketler",
+      cell: ({ row }) => {
+        const tags = row.original.product_tags;
+        if (!tags?.length) return null;
+        return (
+          <div className="flex flex-wrap gap-1">
+            {tags.map((tag: Tables<'product_tags'>, index: number) => (
+              <Badge key={index} variant="secondary">
+                {ProductTagLabels[tag.tag_type as keyof typeof ProductTagLabels]}
+              </Badge>
+            ))}
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "product_prices",
+      header: "Fiyat",
+      cell: ({ row }) => {
+        const prices = row.original.product_prices;
+        if (!prices?.length) return null;
+        return (
+          <div className="flex flex-col gap-1">
+            {prices.map((price: Tables<'product_prices'> & { unit: Tables<'units'> }, index: number) => (
+              <div key={index} className="flex items-center gap-1">
+                <span>{formatPrice(price.price)}</span>
+                <span className="text-muted-foreground">
+                  / {price.unit.name}
+                </span>
+              </div>
+            ))}
+          </div>
+        );
+      },
     },
     {
       accessorKey: "is_active",
       header: "Durum",
-      cell: ({ row }) => <ProductStatus product={row.original} onStatusChange={handleStatusChange} />,
-    },
-    {
-      accessorKey: "price",
-      header: () => <div className="text-left">Fiyat</div>,
-      cell: ({ row }) => <ProductPrice product={row.original} />,
+      cell: ({ row }) => {
+        const isActive = row.getValue("is_active") as boolean;
+        return (
+          <Switch
+            checked={isActive}
+            onCheckedChange={(checked) =>
+              handleStatusChange(row.original.id, checked)
+            }
+          />
+        );
+      },
     },
     {
       id: "actions",
-      cell: ({ row }) => (
-        <ProductActions
-          product={row.original}
-          units={units}
-          onUpdate={onUpdate}
-        />
-      ),
+      cell: ({ row }) => {
+        return (
+          <ProductActions
+            product={row.original}
+            units={units}
+            onUpdate={onUpdate}
+          />
+        );
+      },
     },
   ];
 
   const getSelectedProductIds = () => {
     return Object.keys(rowSelection)
       .filter(index => rowSelection[index])
-      .map(index => initialProducts[parseInt(index)].id);
+      .map(index => localProducts[parseInt(index)].id);
   };
 
   return (
@@ -214,16 +351,24 @@ const ProductsTable = ({ products: initialProducts, onDelete, onAdd, onStatusCha
             columns={columns}
             data={localProducts}
             searchKey="name"
+            enableRowSelection={false}
             onRowSelectionChange={setRowSelection}
             components={{
-              row: ({ children, ...props }) => (
+              row: ({ children, row }) => (
                 <DraggableRow
-                  index={props.row.index}
+                  index={row.index}
                   moveRow={moveRow}
+                  onDragEnd={handleDragEnd}
+                  row={row}
                 >
                   {children}
                 </DraggableRow>
               ),
+            }}
+            initialState={{
+              pagination: {
+                pageSize: 1000 // Çok yüksek bir sayı vererek tüm ürünleri tek sayfada göster
+              }
             }}
           />
 
@@ -235,7 +380,7 @@ const ProductsTable = ({ products: initialProducts, onDelete, onAdd, onStatusCha
                 onClick={() => {
                   const selectedIds = getSelectedProductIds();
                   if (selectedIds.length > 0) {
-                    onDelete?.(selectedIds);
+                    onDelete(selectedIds);
                     setRowSelection({});
                   }
                 }}

@@ -1,26 +1,38 @@
 "use client"
+
 import { useToast } from "@/hooks/use-toast";
-import { createClient } from "@/lib/supabase/client";
 import { ProductFormValues } from "@/lib/validations/product";
-import { ProductWithDetails, Unit } from "@/types/database";
+import { Database } from "@/lib/types/supabase";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../ui/dialog";
 import { Button } from "../ui/button";
-import { ProductForm } from "../forms/product-form";
+import {
+  EditProductForm
+} from "../forms/edit-product-form";
 import { ProductService } from "@/lib/services/product-service";
-import { FormProductImage } from "@/components/forms/product-form";
+import { FormProductImage } from "@/lib/types/image";
+
+type Tables = Database["public"]["Tables"];
+
+interface ProductActionsProps {
+  product: Tables["products"]["Row"] & {
+    product_images: Tables["product_images"]["Row"][];
+    product_allergens: Tables["product_allergens"]["Row"][];
+    product_tags: Tables["product_tags"]["Row"][];
+    product_prices: (Tables["product_prices"]["Row"] & {
+      unit: Tables["units"]["Row"];
+    })[];
+  };
+  units: Tables["units"]["Row"][];
+  onUpdate: () => void;
+}
 
 export const ProductActions = ({
   product,
   units,
   onUpdate
-}: {
-  product: ProductWithDetails;
-  units: Unit[];
-  onUpdate: () => void;
-}) => {
+}: ProductActionsProps) => {
   const { toast } = useToast();
-  const supabase = createClient();
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -37,52 +49,32 @@ export const ProductActions = ({
         const deletedImages = product.product_images
           .filter(img => !existingImageIds.includes(img.id));
 
+        // Silinen resimleri temizle
         for (const img of deletedImages) {
-          const fileName = img.image_url.split('/').pop()!;
-          await supabase.storage
-            .from('product-images')
-            .remove([fileName]);
-
-          await supabase
-            .from('product_images')
-            .delete()
-            .eq('id', img.id);
+          if (img.image_url) {
+            await ProductService.deleteProductImage(img.id, img.image_url);
+          }
         }
 
+        // Yeni resimleri yükle
         const newImages = images.filter(img => !img.isExisting);
         for (const image of newImages) {
-          const fileExt = image.file!.name.split('.').pop();
-          const fileName = `${product.id}-${Date.now()}.${fileExt}`;
-
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('product-images')
-            .upload(fileName, image.file!, {
-              cacheControl: "3600",
-              upsert: true,
-            });
-
-          if (uploadError) throw uploadError;
-
-          const { data: { publicUrl } } = supabase.storage
-            .from('product-images')
-            .getPublicUrl(uploadData.path);
-
-          await supabase
-            .from('product_images')
-            .insert({
-              product_id: product.id,
-              image_url: publicUrl,
-              is_cover: image.is_cover,
-              sort_order: 0
-            });
+          if (image.file) {
+            await ProductService.uploadProductImage(
+              product.id,
+              image.file,
+              image.is_cover,
+              0
+            );
+          }
         }
 
+        // Mevcut resimleri güncelle
         const updatedImages = images.filter(img => img.isExisting);
         for (const image of updatedImages) {
-          await supabase
-            .from('product_images')
-            .update({ is_cover: image.is_cover })
-            .eq('id', image.id);
+          if (image.id) {
+            await ProductService.updateProductImageCover(image.id, image.is_cover);
+          }
         }
       }
 
@@ -124,13 +116,12 @@ export const ProductActions = ({
         <DialogHeader className="flex flex-row items-center justify-between">
           <DialogTitle>Ürünü Düzenle</DialogTitle>
         </DialogHeader>
-        <ProductForm
+        <EditProductForm
           product={product}
           units={units}
           onSubmit={handleSubmit}
           onCancel={() => setOpen(false)}
           isSubmitting={isSubmitting}
-          isEdit={true}
         />
       </DialogContent>
     </Dialog>

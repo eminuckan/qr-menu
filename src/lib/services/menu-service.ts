@@ -1,174 +1,108 @@
-import { createClient } from "../supabase/client";
-import { MenuFormValues } from "../validations/menu";
+import { createClient } from "@/lib/supabase/client";
+import { Database } from "@/lib/types/supabase";
 
-export const MenuService = {
-    async getMenus() {
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error("Kullanıcı bulunamadı");
+type Tables = Database['public']['Tables']
 
-        const { data, error } = await supabase
+export class MenuService {
+    private static supabase = createClient();
+
+    static async getMenu(id: string) {
+        const { data, error } = await this.supabase
             .from('menus')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (error) throw error;
+        return data;
+    }
+
+    static async getCategories(menuId: string) {
+        const { data, error } = await this.supabase
+            .from('categories')
             .select(`
                 *,
-                businesses!inner (
+                products (
                     id,
                     name,
-                    business_users!inner (
-                        user_id
-                    )
+                    is_active
                 )
             `)
-            .eq('businesses.business_users.user_id', user.id);
+            .eq('menu_id', menuId)
+            .order('sort_order', { ascending: true });
 
         if (error) throw error;
         return data;
-    },
+    }
 
-    async createMenu(values: MenuFormValues & { business_id: string }) {
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error("Kullanıcı bulunamadı");
-
-        // Kullanıcının bu işletmeye erişimi var mı kontrol et
-        const { data: hasAccess } = await supabase
-            .from('business_users')
-            .select('business_id')
-            .eq('business_id', values.business_id)
-            .eq('user_id', user.id)
-            .single();
-
-        if (!hasAccess) throw new Error("Bu işletmeye erişiminiz yok");
-
-        const { data, error } = await supabase
+    static async updateMenu(id: string, data: Partial<Tables['menus']['Update']>) {
+        const { error } = await this.supabase
             .from('menus')
-            .insert({
-                name: values.name,
-                business_id: values.business_id,
-                is_active: true,
-                sort_order: 0
-            })
-            .select()
-            .single();
+            .update(data)
+            .eq('id', id);
 
         if (error) throw error;
-        return data;
-    },
+    }
 
-    async updateMenu(id: string, values: MenuFormValues & { business_id: string }) {
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error("Kullanıcı bulunamadı");
-
-        // Kullanıcının bu işletmeye erişimi var mı kontrol et
-        const { data: hasAccess } = await supabase
-            .from('business_users')
-            .select('business_id')
-            .eq('business_id', values.business_id)
-            .eq('user_id', user.id)
-            .single();
-
-        if (!hasAccess) throw new Error("Bu işletmeye erişiminiz yok");
-
-        const { data, error } = await supabase
-            .from('menus')
-            .update({
-                name: values.name,
-                business_id: values.business_id
-            })
-            .eq('id', id)
-            .select()
-            .single();
-
-        if (error) throw error;
-        return data;
-    },
-
-    async deleteMenu(id: string) {
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error("Kullanıcı bulunamadı");
-
-        // Menünün kullanıcıya ait olup olmadığını kontrol et
-        const { data: menu } = await supabase
-            .from('menus')
-            .select(`
-                id,
-                businesses!inner (
-                    business_users!inner (
-                        user_id
-                    )
-                )
-            `)
-            .eq('id', id)
-            .eq('businesses.business_users.user_id', user.id)
-            .single();
-
-        if (!menu) throw new Error("Bu menüyü silme yetkiniz yok");
-
-        const { error } = await supabase
+    static async deleteMenu(id: string) {
+        const { error } = await this.supabase
             .from('menus')
             .delete()
             .eq('id', id);
 
         if (error) throw error;
-        return true;
-    },
+    }
 
-    async moveMenuToBusiness(menuId: string, businessId: string) {
-        const supabase = createClient();
+    static async addCategory(data: Tables['categories']['Insert']) {
+        const { data: category, error } = await this.supabase
+            .from('categories')
+            .insert(data)
+            .select()
+            .single();
 
-        try {
-            // Önce hedef işletmenin adını al
-            const { data: business, error: businessError } = await supabase
-                .from('businesses')
-                .select('name')
-                .eq('id', businessId)
-                .single();
+        if (error) throw error;
+        return category;
+    }
 
-            if (businessError) throw businessError;
+    static async updateCategoryOrder(items: Array<Partial<Tables['categories']['Update']> & Required<Pick<Tables['categories']['Update'], 'id' | 'sort_order' | 'menu_id' | 'name'>>>) {
+        const { error } = await this.supabase
+            .from('categories')
+            .upsert(items.map(item => ({
+                ...item,
+                updated_at: new Date().toISOString()
+            })));
 
-            // Menüyü taşı
-            const { error } = await supabase
-                .from('menus')
-                .update({ business_id: businessId })
-                .eq('id', menuId);
+        if (error) throw error;
+    }
 
-            if (error) throw error;
+    static async updateCategoryStatus(id: string, is_active: boolean) {
+        const { error } = await this.supabase
+            .from('categories')
+            .update({ is_active })
+            .eq('id', id);
 
-            return {
-                success: true,
-                businessName: business.name // İşletme adını da dön
-            };
-        } catch (error) {
-            console.error('Error moving menu:', error);
-            throw error;
-        }
-    },
+        if (error) throw error;
+    }
 
-    async getMenusByBusinessId(businessId: string) {
-        const supabase = createClient();
-
-        const { data, error } = await supabase
+    static async getMenusByBusinessId(businessId: string) {
+        const { data, error } = await this.supabase
             .from('menus')
             .select(`
-                id,
-                name,
-                is_active,
-                sort_order,
+                *,
                 categories (
-                    id,
-                    name,
-                    cover_image,
-                    sort_order,
-                    is_active
+                    *,
+                    products (
+                        id,
+                        name,
+                        is_active
+                    )
                 )
             `)
             .eq('business_id', businessId)
             .eq('is_active', true)
-            .order('sort_order');
+            .order('sort_order', { ascending: true });
 
         if (error) throw error;
         return data;
     }
-}; 
+} 

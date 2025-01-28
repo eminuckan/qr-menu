@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { ProductService } from "@/lib/services/product-service";
 import { Check, Plus, X } from "lucide-react";
-import type { Unit } from "@/types/database";
 import { Input } from "./input";
 import { Button } from "./button";
 import {
@@ -14,15 +13,16 @@ import {
     SelectValue,
 } from "./select";
 import { useToast } from "@/hooks/use-toast";
+import { Tables } from "@/lib/types/supabase";
 
 interface UnitSelectProps {
-    units: Unit[];
+    units: Tables<'units'>[];
     value: string;
-    onChange: (value: string) => void;
-    onUnitAdded?: (newUnit: Unit) => void;
+    onValueChange: (value: string) => void;
+    onUnitAdded?: (newUnit: Tables<'units'>) => void;
 }
 
-export function UnitSelect({ units, value, onChange, onUnitAdded }: UnitSelectProps) {
+export function UnitSelect({ units, value, onValueChange, onUnitAdded }: UnitSelectProps) {
     const [isCreating, setIsCreating] = useState(false);
     const [newUnitName, setNewUnitName] = useState("");
     const [isLoading, setIsLoading] = useState(false);
@@ -35,7 +35,7 @@ export function UnitSelect({ units, value, onChange, onUnitAdded }: UnitSelectPr
         try {
             const newUnit = await ProductService.addUnit(newUnitName.trim());
             onUnitAdded?.(newUnit);
-            onChange(newUnit.id);
+            onValueChange(newUnit.id);
             setIsCreating(false);
             setNewUnitName("");
             toast({
@@ -98,11 +98,7 @@ export function UnitSelect({ units, value, onChange, onUnitAdded }: UnitSelectPr
                 </div>
             ) : (
                 <>
-                    <Select
-                        value={value}
-                        onValueChange={onChange}
-                        disabled={isLoading}
-                    >
+                    <Select value={value} onValueChange={onValueChange} disabled={isLoading}>
                         <SelectTrigger className="flex-1">
                             <SelectValue placeholder="Birim seçin" />
                         </SelectTrigger>

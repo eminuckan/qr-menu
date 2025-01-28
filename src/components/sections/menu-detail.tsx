@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
-import { Category, Menu } from "@/types/database";
+import { Database } from "@/lib/types/supabase";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, GripVertical, Eye, Pencil, Trash2 } from "lucide-react";
 import { notFound } from "next/navigation";
@@ -18,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
 import { Switch } from "@/components/ui/switch";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   DndContext,
   closestCenter,
@@ -37,19 +36,25 @@ import {
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { createPortal } from "react-dom";
-import PageHeader from "@/components/layout/page-header"
+import PageHeader from "@/components/layout/page-header";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { MenuService } from "@/lib/services/menu-service";
+import { useRouter } from "next/navigation";
+import { Label } from "@/components/ui/label";
+import Link from "next/link";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { MenuService } from "@/lib/services/menu-service";
-import { useRouter } from "next/navigation";
-import { Label } from "@/components/ui/label";
-import Link from "next/link";
+} from "@/components/ui/select";
+
+type Tables = Database['public']['Tables']
+type Menu = Tables['menus']['Row']
+type Category = Tables['categories']['Row'] & {
+  products: Array<Pick<Tables['products']['Row'], 'id' | 'name' | 'is_active'>>
+}
 
 interface MenuDetailProps {
   id: string;
@@ -106,30 +111,31 @@ const CategoryCard = ({
               </div>
               <h3 className="text-sm md:text-base font-medium truncate">{category.name}</h3>
               <p className="text-xs md:text-sm text-muted-foreground mb-1 md:mb-2">
-                Toplam Ürün: {category.products?.filter(product => product.is_active).length || 0}
+                Toplam Ürün: {category.products?.filter((product: { is_active: boolean | null }) => product.is_active === true).length || 0}
               </p>
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-1 md:gap-2">
                   <Switch
                     className="scale-75 md:scale-100"
-                    checked={category.is_active}
+                    checked={category.is_active === true}
                     onCheckedChange={(checked) =>
                       onActiveChange(category.id, checked)
                     }
                   />
                   <span className="text-xs md:text-sm font-medium text-muted-foreground">
-                    {category.is_active ? "Aktif" : "Pasif"}
+                    {category.is_active === true ? "Aktif" : "Pasif"}
                   </span>
                 </div>
                 <Button
                   variant="outline"
                   size="sm"
                   className="gap-1 md:gap-2 h-8 md:h-9"
-                  as="link"
-                  href={`/dashboard/menu/category/${category.id}`}
+                  asChild
                 >
-                  <Eye className="h-3 w-3 md:h-4 md:w-4" />
-                  <span className="text-xs md:text-sm">Detaylar</span>
+                  <Link href={`/dashboard/menu/category/${category.id}`}>
+                    <Eye className="h-3 w-3 md:h-4 md:w-4" />
+                    <span className="text-xs md:text-sm">Detaylar</span>
+                  </Link>
                 </Button>
               </div>
             </div>
@@ -155,9 +161,7 @@ export function MenuDetail({ id }: MenuDetailProps) {
   const [menu, setMenu] = useState<Menu | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<
-    "all" | "active" | "inactive"
-  >("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
@@ -175,90 +179,51 @@ export function MenuDetail({ id }: MenuDetailProps) {
 
   useEffect(() => {
     const fetchMenuAndCategories = async () => {
-      const supabase = createClient();
+      try {
+        const menuData = await MenuService.getMenu(id);
+        const categoriesData = await MenuService.getCategories(id);
 
-      const { data: menuData, error: menuError } = await supabase
-        .from("menus")
-        .select("*")
-        .eq("id", id)
-        .single();
-
-      if (menuError || !menuData) {
+        setMenu(menuData);
+        setCategories(categoriesData);
+      } catch (error) {
+        console.error("Veri yüklenirken hata:", error);
         setError(true);
+      } finally {
         setLoading(false);
-        return;
       }
-
-      const { data: categoriesData, error: categoriesError } = await supabase
-        .from("categories")
-        .select(
-          `
-          *,
-          products (
-            id,
-            name,
-            is_active
-          )
-        `
-        )
-        .eq("menu_id", id)
-        .order("sort_order", { ascending: true });
-
-      if (categoriesError) {
-        console.error("Kategoriler yüklenirken hata:", categoriesError);
-        return;
-      }
-
-      setMenu(menuData);
-      setCategories(categoriesData || []);
-      setLoading(false);
     };
 
     fetchMenuAndCategories();
   }, [id]);
 
   const onSubmit = async (data: CategoryFormData) => {
-    const supabase = createClient();
+    try {
+      const maxSortOrder = categories.reduce((max, cat) => Math.max(max, cat.sort_order || 0), 0);
 
-    const { data: maxSortOrder } = await supabase
-      .from("categories")
-      .select("sort_order")
-      .eq("menu_id", id)
-      .order("sort_order", { ascending: false })
-      .limit(1);
+      const newCategory = await MenuService.addCategory({
+        name: data.name,
+        menu_id: id,
+        is_active: true,
+        sort_order: maxSortOrder + 1,
+        color: '#ffffff'
+      });
 
-    const nextSortOrder = maxSortOrder?.[0]?.sort_order ?? 0;
+      setCategories(prev => [...prev, { ...newCategory, products: [] }]);
 
-    const { error } = await supabase.from("categories").insert({
-      name: data.name,
-      menu_id: id,
-      is_active: true,
-      sort_order: nextSortOrder + 1,
-    });
+      toast({
+        title: "Başarılı",
+        description: "Kategori başarıyla eklendi",
+      });
 
-    if (error) {
+      setIsOpen(false);
+      form.reset();
+    } catch (error) {
       toast({
         variant: "destructive",
         title: "Hata",
         description: "Kategori eklenirken bir hata oluştu",
       });
-      return;
     }
-
-    toast({
-      title: "Başarılı",
-      description: "Kategori başarıyla eklendi",
-    });
-    setIsOpen(false);
-    form.reset();
-
-    const { data: newCategories } = await supabase
-      .from("categories")
-      .select("*")
-      .eq("menu_id", id)
-      .order("sort_order", { ascending: true });
-
-    setCategories(newCategories || []);
   };
 
   const handleDragStart = (event: any) => {
@@ -281,29 +246,29 @@ export function MenuDetail({ id }: MenuDetailProps) {
         }));
 
         const updateDatabase = async () => {
-          const supabase = createClient();
+          try {
+            const updateData = updatedItems.map(item => ({
+              id: item.id,
+              sort_order: item.sort_order,
+              menu_id: item.menu_id,
+              name: item.name,
+              is_active: item.is_active === true,
+              color: item.color || '#ffffff'
+            }));
 
-          for (const item of updatedItems) {
-            const { error } = await supabase
-              .from("categories")
-              .update({ sort_order: item.sort_order })
-              .eq("id", item.id);
+            await MenuService.updateCategoryOrder(updateData);
 
-            if (error) {
-              toast({
-                variant: "destructive",
-                title: "Hata",
-                description:
-                  "Kategori sıralaması güncellenirken bir hata oluştu.",
-              });
-              return;
-            }
+            toast({
+              title: "Başarılı",
+              description: "Kategori sıralaması güncellendi.",
+            });
+          } catch (error) {
+            toast({
+              variant: "destructive",
+              title: "Hata",
+              description: "Kategori sıralaması güncellenirken bir hata oluştu.",
+            });
           }
-
-          toast({
-            title: "Başarılı",
-            description: "Kategori sıralaması güncellendi.",
-          });
         };
 
         updateDatabase();
@@ -317,32 +282,26 @@ export function MenuDetail({ id }: MenuDetailProps) {
   };
 
   const handleActiveChange = async (categoryId: string, checked: boolean) => {
-    const supabase = createClient();
+    try {
+      await MenuService.updateCategoryStatus(categoryId, checked);
 
-    const { error } = await supabase
-      .from("categories")
-      .update({ is_active: checked })
-      .eq("id", categoryId);
+      setCategories(prev =>
+        prev.map(item =>
+          item.id === categoryId ? { ...item, is_active: checked } : item
+        )
+      );
 
-    if (error) {
+      toast({
+        title: "Başarılı",
+        description: "Kategori durumu güncellendi.",
+      });
+    } catch (error) {
       toast({
         variant: "destructive",
         title: "Hata",
         description: "Kategori durumu güncellenirken bir hata oluştu.",
       });
-      return;
     }
-
-    setCategories((prevItems) =>
-      prevItems.map((item) =>
-        item.id === categoryId ? { ...item, is_active: checked } : item
-      )
-    );
-
-    toast({
-      title: "Başarılı",
-      description: "Kategori durumu güncellendi.",
-    });
   };
 
   const handleNameChange = async (newName: string) => {
@@ -355,35 +314,33 @@ export function MenuDetail({ id }: MenuDetailProps) {
       return;
     }
 
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("menus")
-      .update({ name: newName.trim() })
-      .eq("id", id);
+    try {
+      await MenuService.updateMenu(id, { name: newName.trim() });
 
-    if (error) {
+      setMenu(prev => prev ? { ...prev, name: newName.trim() } : null);
+
+      toast({
+        title: "Başarılı",
+        description: "Menü adı güncellendi",
+      });
+    } catch (error) {
       toast({
         variant: "destructive",
         title: "Hata",
         description: "Menü adı güncellenirken bir hata oluştu",
       });
-      return;
     }
-
-    setMenu((prev) => (prev ? { ...prev, name: newName.trim() } : null));
-    toast({
-      title: "Başarılı",
-      description: "Menü adı güncellendi",
-    });
   };
 
   const handleDelete = async () => {
     try {
       await MenuService.deleteMenu(id);
+
       toast({
         title: "Başarılı",
         description: "Menü ve ilişkili tüm veriler başarıyla silindi",
       });
+
       router.push('/dashboard/menu');
     } catch (error) {
       console.error('Menü silme hatası:', error);
@@ -545,7 +502,7 @@ export function MenuDetail({ id }: MenuDetailProps) {
         </div>
         <Select
           value={statusFilter}
-          onValueChange={(value) => setStatusFilter(value as "all" | "active" | "inactive")}
+          onValueChange={(value: "all" | "active" | "inactive") => setStatusFilter(value)}
         >
           <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="Filtrele" />

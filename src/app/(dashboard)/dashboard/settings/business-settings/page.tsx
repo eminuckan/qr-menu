@@ -37,25 +37,19 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useBusinessContext } from "@/lib/contexts/business-context";
+import { Tables } from "@/lib/types/supabase";
 
-interface Business {
-    id: string;
-    name: string;
-    slug: string;
-    created_at: string;
-    updated_at: string;
-    business_users: {
-        role: string;
-    }[];
-}
+type BusinessWithUsers = Tables<'businesses'> & {
+    business_users: Tables<'business_users'>[];
+};
 
 export default function BusinessSettingsPage() {
-    const [businesses, setBusinesses] = useState<Business[]>([]);
+    const [businesses, setBusinesses] = useState<BusinessWithUsers[]>([]);
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
     const router = useRouter();
-    const [editingBusiness, setEditingBusiness] = useState<Business | null>(null);
-    const [deletingBusiness, setDeletingBusiness] = useState<Business | null>(null);
+    const [editingBusiness, setEditingBusiness] = useState<BusinessWithUsers | null>(null);
+    const [deletingBusiness, setDeletingBusiness] = useState<BusinessWithUsers | null>(null);
     const { setHasBusiness } = useBusinessContext();
 
     const form = useForm<BusinessFormValues>({
@@ -76,7 +70,7 @@ export default function BusinessSettingsPage() {
         const loadBusinesses = async () => {
             try {
                 const data = await BusinessService.getBusinesses();
-                setBusinesses(data);
+                setBusinesses(data as BusinessWithUsers[]);
             } catch (error) {
                 toast({
                     variant: "destructive",
@@ -98,7 +92,7 @@ export default function BusinessSettingsPage() {
 
             // İşletmeleri yeniden yükle
             const data = await BusinessService.getBusinesses();
-            setBusinesses(data);
+            setBusinesses(data as BusinessWithUsers[]);
 
             // Context'i güncelle
             setHasBusiness(true);
@@ -129,7 +123,7 @@ export default function BusinessSettingsPage() {
 
             // İşletmeleri yeniden yükle
             const data = await BusinessService.getBusinesses();
-            setBusinesses(data);
+            setBusinesses(data as BusinessWithUsers[]);
 
             setEditingBusiness(null);
             editForm.reset();

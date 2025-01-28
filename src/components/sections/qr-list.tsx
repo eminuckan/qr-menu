@@ -1,12 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { QRCode, Business } from "@/types/database";
+import { Tables } from "@/lib/types/supabase";
 import { QRService } from "@/lib/services/qr-service";
-import { BusinessService } from "@/lib/services/business-service";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import {
     Select,
     SelectContent,
@@ -14,7 +13,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Pencil, Trash2, QrCode, Download } from "lucide-react";
+import { Pencil, Trash2, Download } from "lucide-react";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -25,22 +24,17 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 export const QRList = ({
     onEdit,
     selectedBusinessId
 }: {
-    onEdit: (qr: QRCode) => void;
+    onEdit: (qr: Tables<'qr_codes'>) => void;
     selectedBusinessId: string;
 }) => {
-    const [qrCodes, setQRCodes] = useState<QRCode[]>([]);
-    const [qrToDelete, setQrToDelete] = useState<QRCode | null>(null);
+    const [qrCodes, setQRCodes] = useState<Tables<'qr_codes'>[]>([]);
+    const [qrToDelete, setQrToDelete] = useState<Tables<'qr_codes'> | null>(null);
+    const { toast } = useToast();
 
     useEffect(() => {
         if (selectedBusinessId) {
@@ -82,12 +76,22 @@ export const QRList = ({
         }
     };
 
-    const handleDownload = async (qr: QRCode, type: 'svg' | 'pdf') => {
+    const handleDownload = async (qr: Tables<'qr_codes'>, type: 'svg' | 'pdf') => {
         try {
             const fileName = `qr-${qr.name.toLowerCase().replace(/\s+/g, '-')}`;
+            const path = type === 'svg' ? qr.svg_path : qr.pdf_path;
+
+            if (!path) {
+                toast({
+                    title: "Hata",
+                    description: `${type.toUpperCase()} dosyası bulunamadı`,
+                    variant: "destructive"
+                });
+                return;
+            }
 
             // URL'den blob'a çevir
-            const response = await fetch(type === 'svg' ? qr.svg_path : qr.pdf_path || '');
+            const response = await fetch(path);
             const blob = await response.blob();
 
             // Blob URL oluştur
@@ -114,7 +118,7 @@ export const QRList = ({
         }
     };
 
-    const handleDownloadSelect = (qr: QRCode, value: string) => {
+    const handleDownloadSelect = (qr: Tables<'qr_codes'>, value: string) => {
         if (value === 'svg') {
             handleDownload(qr, 'svg');
         } else if (value === 'pdf') {
@@ -131,7 +135,7 @@ export const QRList = ({
                             <div className="flex flex-col items-center gap-4">
                                 <div className="w-40 h-40">
                                     <img
-                                        src={qr.svg_path}
+                                        src={qr.svg_path || '/no-qr.svg'}
                                         alt={qr.name}
                                         className="w-full h-full object-contain"
                                     />

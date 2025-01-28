@@ -1,5 +1,9 @@
 import { createClient } from "../supabase/client";
+import { Database } from "@/lib/types/supabase";
 
+type Tables = Database['public']['Tables']
+
+// Adisyo API Tipleri
 interface AdisyoProduct {
     productName: string;
     productCode: string | null;
@@ -28,11 +32,15 @@ interface AdisyoResponse {
     message: string;
 }
 
+// İçe Aktarma İstatistikleri
 interface ImportStats {
     totalCategories: number;
     importedCategories: number;
+    updatedCategories: number;
     totalProducts: number;
     importedProducts: number;
+    updatedProducts: number;
+    updatedPrices: number;
     failedItems: {
         categories: Array<{ name: string; error: string }>;
         products: Array<{ name: string; category: string; error: string }>;
@@ -53,7 +61,7 @@ export interface ImportContext {
 }
 
 const RATE_LIMIT_DURATION = 180;
-let lastRequestTime: number | null = null;
+
 
 const API_KEY = process.env.NEXT_PUBLIC_ADISYO_API_KEY;
 const API_SECRET = process.env.NEXT_PUBLIC_ADISYO_API_SECRET;
@@ -63,56 +71,112 @@ if (!API_KEY || !API_SECRET || !API_CONSUMER) {
     throw new Error('Adisyo API bilgileri eksik. Lütfen .env dosyasını kontrol edin.');
 }
 
-export const ImportService = {
-    async importMenuFromAdisyo(
+export class ImportService {
+    private static supabase = createClient();
+
+    private static async findOrCreateUnit(unitName: string): Promise<string> {
+        const normalizedName = unitName.toLowerCase().trim();
+
+        const { data: existingUnit, error: searchError } = await this.supabase
+            .from('units')
+            .select()
+            .eq('normalized_name', normalizedName)
+            .single();
+
+        if (!searchError && existingUnit) {
+            return existingUnit.id;
+        }
+
+        const { data: newUnit, error: createError } = await this.supabase
+            .from('units')
+            .insert({
+                name: unitName,
+                normalized_name: normalizedName
+            })
+            .select()
+            .single();
+
+        if (createError) throw createError;
+        if (!newUnit) throw new Error('Birim oluşturulamadı');
+
+        return newUnit.id;
+    }
+
+    private static async compareAndUpdateProduct(
+        existingProduct: Tables['products']['Row'],
+        adisyoProduct: AdisyoProduct,
+        categoryId: string
+    ): Promise<{ updated: boolean; priceUpdated: boolean }> {
+        let updated = false;
+        let priceUpdated = false;
+
+        // Temel ürün bilgilerini karşılaştır
+        const updates: Partial<Tables['products']['Update']> = {};
+        if (existingProduct.name !== adisyoProduct.productName) updates.name = adisyoProduct.productName;
+        if (existingProduct.kdv_rate !== adisyoProduct.taxRate) updates.kdv_rate = adisyoProduct.taxRate;
+
+        // Eğer güncellenecek alan varsa güncelle
+        if (Object.keys(updates).length > 0) {
+            const { error } = await this.supabase
+                .from('products')
+                .update(updates)
+                .eq('id', existingProduct.id);
+
+            if (error) throw error;
+            updated = true;
+        }
+
+        // Fiyat kontrolü ve güncelleme
+        const defaultUnit = adisyoProduct.productUnits.find(u => u.isDefault);
+        if (defaultUnit) {
+            const unitId = await this.findOrCreateUnit(defaultUnit.unitName);
+            const price = defaultUnit.prices.find(p => p.orderType === 1)?.price || 0;
+
+            const { data: existingPrice } = await this.supabase
+                .from('product_prices')
+                .select()
+                .eq('product_id', existingProduct.id)
+                .eq('unit_id', unitId)
+                .single();
+
+            if (existingPrice && existingPrice.price !== price) {
+                const { error } = await this.supabase
+                    .from('product_prices')
+                    .update({ price })
+                    .eq('id', existingPrice.id);
+
+                if (error) throw error;
+                priceUpdated = true;
+            } else if (!existingPrice) {
+                const { error } = await this.supabase
+                    .from('product_prices')
+                    .insert({
+                        product_id: existingProduct.id,
+                        unit_id: unitId,
+                        price
+                    });
+
+                if (error) throw error;
+                priceUpdated = true;
+            }
+        }
+
+        return { updated, priceUpdated };
+    }
+
+    static async importMenuFromAdisyo(
         context: ImportContext,
         businessId: string,
         onProgress?: (progress: ImportProgress) => void
     ) {
-        const supabase = createClient();
-        let abortController = new AbortController();
-        let isCleaningUp = false;
-
-        const checkAbort = async () => {
-            if (context.aborted && !isCleaningUp) {
-                console.log("İçe aktarma iptal edildi");
-                abortController.abort();
-                isCleaningUp = true;
-                await cleanup();
-                return true;
-            }
-            return false;
-        };
-
-        const cleanup = async () => {
-            if (!context.menuId || isCleaningUp) return;
-
-            try {
-                console.log("Cleanup başlatılıyor...");
-
-                const { error } = await supabase.rpc('cleanup_import', {
-                    menu_id: context.menuId,
-                    category_ids: context.categoryIds
-                });
-
-                if (error) {
-                    console.error("Cleanup sırasında hata:", error);
-                    return;
-                }
-
-                console.log("Cleanup tamamlandı");
-            } catch (error) {
-                console.error("Cleanup sırasında hata:", error);
-            } finally {
-                isCleaningUp = false;
-            }
-        };
-
         const stats: ImportStats = {
             totalCategories: 0,
             importedCategories: 0,
+            updatedCategories: 0,
             totalProducts: 0,
             importedProducts: 0,
+            updatedProducts: 0,
+            updatedPrices: 0,
             failedItems: {
                 categories: [],
                 products: []
@@ -120,81 +184,50 @@ export const ImportService = {
         };
 
         try {
-            if (await checkAbort()) return { success: false, aborted: true, stats };
-
-            const { data: existingMenu } = await supabase
-                .from('menus')
-                .select('*')
-                .eq('name', 'Adisyo Menü')
-                .eq('business_id', businessId)
-                .single();
-
-            if (await checkAbort()) return { success: false, aborted: true, stats };
-
-            lastRequestTime = Date.now();
-
+            // API'den veri çek
             const response = await fetch('https://ext.adisyo.com/api/External/v2/Products', {
                 headers: {
-                    'x-api-key': API_KEY,
-                    'x-api-secret': API_SECRET,
-                    'x-api-consumer': API_CONSUMER
-                },
-                signal: abortController.signal
+                    'x-api-key': API_KEY || '',
+                    'x-api-secret': API_SECRET || '',
+                    'x-api-consumer': API_CONSUMER || ''
+                }
             });
 
-            console.log('API yanıt durumu:', response.status);
-            console.log('API yanıt başlıkları:', Object.fromEntries(response.headers.entries()));
-
-            const responseData = await response.json();
-            console.log('API yanıtı:', responseData);
-
-            if (response.status === 429 || responseData.status === 601) {
-                lastRequestTime = Date.now();
-                throw new Error(`API rate limit aşıldı. Lütfen ${RATE_LIMIT_DURATION} saniye bekleyin ve tekrar deneyin.`);
-            }
-
             if (!response.ok) {
-                console.error('API hata detayları:', {
-                    status: response.status,
-                    statusText: response.statusText,
-                    body: responseData
-                });
-                throw new Error(`Adisyo API'den veri alınamadı: ${response.status} ${response.statusText}`);
+                throw new Error(`API Hatası: ${response.status} ${response.statusText}`);
             }
 
-            const adisyoData: AdisyoResponse = responseData;
+            const adisyoData: AdisyoResponse = await response.json();
             if (adisyoData.status !== 100) {
-                console.error('API geçersiz yanıt:', adisyoData);
-                throw new Error(adisyoData.message || 'Adisyo API\'den geçersiz yanıt');
+                throw new Error(adisyoData.message || 'Geçersiz API yanıtı');
             }
 
+            // İstatistikleri güncelle
             stats.totalCategories = adisyoData.data.length;
-            stats.totalProducts = adisyoData.data.reduce((sum, category) => sum + category.products.length, 0);
+            stats.totalProducts = adisyoData.data.reduce((sum, cat) => sum + cat.products.length, 0);
 
-            let menuId: string;
-            if (existingMenu) {
-                menuId = existingMenu.id;
-                context.menuId = menuId;
-            } else {
-                const { data: menu, error: menuError } = await supabase
+            // Menüyü bul veya oluştur
+            let menuId = context.menuId;
+            if (!menuId) {
+                const { data: menu, error: menuError } = await this.supabase
                     .from('menus')
                     .insert({
                         name: 'Adisyo Menü',
                         is_active: true,
-                        sort_order: 0,
-                        color: '#ffffff',
-                        business_id: businessId
+                        business_id: businessId,
+                        color: '#ffffff'
                     })
                     .select()
                     .single();
 
-                if (menuError) throw new Error('Menü oluşturulurken hata: ' + menuError.message);
+                if (menuError) throw menuError;
                 menuId = menu.id;
                 context.menuId = menuId;
             }
 
-            for (const [categoryIndex, category] of adisyoData.data.entries()) {
-                if (await checkAbort()) return { success: false, aborted: true, stats };
+            // Kategorileri ve ürünleri işle
+            for (const category of adisyoData.data) {
+                if (context.aborted) break;
 
                 try {
                     onProgress?.({
@@ -203,50 +236,40 @@ export const ImportService = {
                         stats
                     });
 
-                    if (await checkAbort()) return { success: false, aborted: true, stats };
-
-                    const { data: existingCategory } = await supabase
+                    // Kategoriyi bul veya oluştur
+                    const { data: existingCategory } = await this.supabase
                         .from('categories')
-                        .select('*')
+                        .select()
                         .eq('menu_id', menuId)
                         .eq('name', category.categoryName)
                         .single();
 
                     let categoryId: string;
                     if (existingCategory) {
-                        const { data: updatedCategory, error: updateError } = await supabase
-                            .from('categories')
-                            .update({
-                                sort_order: categoryIndex,
-                            })
-                            .eq('id', existingCategory.id)
-                            .select()
-                            .single();
-
-                        if (updateError) throw new Error(updateError.message);
                         categoryId = existingCategory.id;
+                        stats.updatedCategories++;
                     } else {
-                        const { data: newCategory, error: categoryError } = await supabase
+                        const { data: newCategory, error: categoryError } = await this.supabase
                             .from('categories')
                             .insert({
                                 menu_id: menuId,
                                 name: category.categoryName,
                                 is_active: true,
-                                sort_order: categoryIndex,
                                 color: '#ffffff'
                             })
                             .select()
                             .single();
 
-                        if (categoryError) throw new Error(categoryError.message);
+                        if (categoryError) throw categoryError;
                         categoryId = newCategory.id;
+                        stats.importedCategories++;
                     }
 
-                    stats.importedCategories++;
                     context.categoryIds.push(categoryId);
 
-                    for (const [productIndex, product] of category.products.entries()) {
-                        if (await checkAbort()) return { success: false, aborted: true, stats };
+                    // Ürünleri işle
+                    for (const product of category.products) {
+                        if (context.aborted) break;
 
                         try {
                             onProgress?.({
@@ -255,95 +278,58 @@ export const ImportService = {
                                 stats
                             });
 
-                            if (await checkAbort()) return { success: false, aborted: true, stats };
-
-                            const { data: existingProduct } = await supabase
+                            // Ürünü bul veya oluştur
+                            const { data: existingProduct } = await this.supabase
                                 .from('products')
-                                .select('*')
+                                .select()
                                 .eq('category_id', categoryId)
                                 .eq('name', product.productName)
                                 .single();
 
-                            let productId: string;
                             if (existingProduct) {
-                                const { data: updatedProduct, error: updateError } = await supabase
-                                    .from('products')
-                                    .update({
-                                        kdv_rate: product.taxRate,
-                                        sort_order: productIndex,
-                                    })
-                                    .eq('id', existingProduct.id)
-                                    .select()
-                                    .single();
+                                // Mevcut ürünü güncelle
+                                const { updated, priceUpdated } = await this.compareAndUpdateProduct(
+                                    existingProduct,
+                                    product,
+                                    categoryId
+                                );
 
-                                if (updateError) throw new Error(updateError.message);
-                                productId = existingProduct.id;
+                                if (updated) stats.updatedProducts++;
+                                if (priceUpdated) stats.updatedPrices++;
                             } else {
-                                const { data: newProduct, error: productError } = await supabase
+                                // Yeni ürün oluştur
+                                const { data: newProduct, error: productError } = await this.supabase
                                     .from('products')
                                     .insert({
                                         category_id: categoryId,
                                         name: product.productName,
-                                        description: null,
-                                        color: '#ffffff',
                                         kdv_rate: product.taxRate,
-                                        calories: null,
-                                        preparing_time: null,
-                                        is_active: true,
-                                        sort_order: productIndex
+                                        is_active: true
                                     })
                                     .select()
                                     .single();
 
-                                if (productError) throw new Error(productError.message);
-                                productId = newProduct.id;
-                            }
+                                if (productError) throw productError;
 
-                            const defaultUnit = product.productUnits.find(u => u.isDefault);
-                            if (defaultUnit) {
-                                try {
-                                    console.log(`Unit işlemi başlıyor: ${defaultUnit.unitName}`);
-                                    let unitId = await this._findOrCreateUnit(defaultUnit.unitName);
-
+                                // Varsayılan birim ve fiyat ekle
+                                const defaultUnit = product.productUnits.find(u => u.isDefault);
+                                if (defaultUnit) {
+                                    const unitId = await this.findOrCreateUnit(defaultUnit.unitName);
                                     const price = defaultUnit.prices.find(p => p.orderType === 1)?.price || 0;
-                                    console.log(`Fiyat ayarlanıyor: ${price} - Unit: ${defaultUnit.unitName}`);
 
-                                    const { data: existingPrice } = await supabase
+                                    const { error: priceError } = await this.supabase
                                         .from('product_prices')
-                                        .select('*')
-                                        .eq('product_id', productId)
-                                        .eq('unit_id', unitId)
-                                        .single();
+                                        .insert({
+                                            product_id: newProduct.id,
+                                            unit_id: unitId,
+                                            price
+                                        });
 
-                                    if (existingPrice) {
-                                        if (existingPrice.price !== price) {
-                                            console.log(`Fiyat güncelleniyor: ${existingPrice.price} -> ${price}`);
-                                            const { error: updateError } = await supabase
-                                                .from('product_prices')
-                                                .update({ price })
-                                                .eq('id', existingPrice.id);
-
-                                            if (updateError) throw new Error(updateError.message);
-                                        }
-                                    } else {
-                                        console.log(`Yeni fiyat ekleniyor: ${price}`);
-                                        const { error: priceError } = await supabase
-                                            .from('product_prices')
-                                            .insert({
-                                                product_id: productId,
-                                                unit_id: unitId,
-                                                price: price
-                                            });
-
-                                        if (priceError) throw new Error(priceError.message);
-                                    }
-                                } catch (error) {
-                                    console.error(`Birim/fiyat işlemi sırasında hata: ${error}`);
-                                    throw error;
+                                    if (priceError) throw priceError;
                                 }
-                            }
 
-                            stats.importedProducts++;
+                                stats.importedProducts++;
+                            }
                         } catch (error) {
                             stats.failedItems.products.push({
                                 name: product.productName,
@@ -366,72 +352,26 @@ export const ImportService = {
                 stats
             };
 
-        } catch (error: unknown) {
-            if (error instanceof Error && error.name === 'AbortError') {
-                return { success: false, aborted: true, stats };
-            }
-
-            if (error instanceof Error && error.message.includes('rate limit')) {
-                throw new Error(`API rate limit aşıldı. Lütfen ${RATE_LIMIT_DURATION} saniye bekleyin ve tekrar deneyin.`);
-            }
-
-            if (error instanceof Error && !error.message.includes('rate limit')) {
-                lastRequestTime = null;
-            }
-            console.error('API çağrısı sırasında hata:', error);
-            if (error instanceof Error) {
-                console.error('Hata stack:', error.stack);
-            }
-            await cleanup();
-            throw error;
-        } finally {
-            if (context.aborted && !isCleaningUp) {
-                await cleanup();
-            }
-        }
-    },
-
-    async _findOrCreateUnit(unitName: string): Promise<string> {
-        const supabase = createClient();
-        const normalizedName = unitName.toLowerCase().trim();
-
-        try {
-            const { data: existingUnit, error: searchError } = await supabase
-                .from('units')
-                .select()
-                .eq('normalized_name', normalizedName)
-                .single();
-
-            if (!searchError && existingUnit) {
-                console.log(`Mevcut unit bulundu: ${unitName}`);
-                return existingUnit.id;
-            }
-
-            console.log(`Yeni unit oluşturuluyor: ${unitName}`);
-            const { data: newUnit, error: createError } = await supabase
-                .from('units')
-                .insert({
-                    name: unitName,
-                    normalized_name: normalizedName,
-                    is_active: true
-                })
-                .select()
-                .single();
-
-            if (createError) {
-                console.error(`Unit oluşturma hatası: ${createError.message}`);
-                throw new Error(`Birim oluşturulurken hata: ${createError.message}`);
-            }
-
-            console.log(`Yeni unit oluşturuldu: ${unitName}`);
-            return newUnit.id;
         } catch (error) {
-            console.error(`Unit işlemi sırasında hata: ${error}`);
+            if (error instanceof Error && error.message.includes('rate limit')) {
+                throw new Error(`API rate limit aşıldı. Lütfen ${RATE_LIMIT_DURATION} saniye bekleyin.`);
+            }
             throw error;
         }
-    },
+    }
 
-    abortImport(context: ImportContext) {
+    static async cleanup(context: ImportContext) {
+        if (!context.menuId) return;
+
+        const { error } = await this.supabase.rpc('cleanup_import', {
+            menu_id: context.menuId,
+            category_ids: context.categoryIds
+        });
+
+        if (error) throw error;
+    }
+
+    static abortImport(context: ImportContext) {
         context.aborted = true;
     }
-}; 
+} 

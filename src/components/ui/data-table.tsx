@@ -50,6 +50,15 @@ interface DataTableProps<TData, TValue> {
       key: string
     }>
   }
+  onDelete?: (selectedIds: string[]) => Promise<void>
+  deleteButtonText?: string
+  enableRowSelection?: boolean
+  initialState?: {
+    pagination?: {
+      pageSize?: number
+      pageIndex?: number
+    }
+  }
 }
 
 const columnNames: Record<string, string> = {
@@ -66,14 +75,19 @@ export function DataTable<TData, TValue>({
   searchKey,
   onRowSelectionChange,
   components,
+  onDelete,
+  deleteButtonText,
+  enableRowSelection = true,
+  initialState
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState({})
+  const [filtering, setFiltering] = React.useState<string>("")
 
   const columns = [
-    {
+    ...(enableRowSelection === false ? [] : [{
       id: "select",
       header: ({ table }: { table: any }) => (
         <Checkbox
@@ -94,7 +108,7 @@ export function DataTable<TData, TValue>({
       ),
       enableSorting: false,
       enableHiding: false,
-    },
+    }]),
     ...userColumns,
   ]
 
@@ -109,7 +123,7 @@ export function DataTable<TData, TValue>({
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: (updatedSelection) => {
-      const newSelection = typeof updatedSelection === 'function' 
+      const newSelection = typeof updatedSelection === 'function'
         ? updatedSelection(rowSelection)
         : updatedSelection;
       setRowSelection(newSelection);
@@ -120,7 +134,11 @@ export function DataTable<TData, TValue>({
       columnFilters,
       columnVisibility,
       rowSelection,
+      globalFilter: filtering,
     },
+    enableRowSelection,
+    onGlobalFilterChange: setFiltering,
+    initialState: initialState,
   })
 
   return (
@@ -173,9 +191,9 @@ export function DataTable<TData, TValue>({
                     {header.isPlaceholder
                       ? null
                       : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
+                        header.column.columnDef.header,
+                        header.getContext()
+                      )}
                   </TableHead>
                 ))}
               </TableRow>

@@ -56,8 +56,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { MenuService } from "@/lib/services/menu-service";
-import { BusinessService } from "@/lib/services/business-service";
 import {
   Select,
   SelectContent,
@@ -65,29 +63,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useBusinessContext } from '@/lib/contexts/business-context';
+import { Database } from '@/lib/types/supabase';
 
-interface Business {
-  id: string;
-  name: string;
-}
+type Menu = Database['public']['Tables']['menus']['Row'] & {
+  businesses: Pick<Database['public']['Tables']['businesses']['Row'], 'id' | 'name'>;
+};
 
-interface Menu {
-  id: string;
+type Business = Pick<Database['public']['Tables']['businesses']['Row'], 'id' | 'name'>;
+
+type MenuFormValues = {
   name: string;
   business_id: string;
-  is_active: boolean;
-  sort_order: number;
-  color?: string;
-  created_at: string;
-  cover_image?: string;
-  businesses: {
-    id: string;
-    name: string;
-  };
-}
+};
 
 const menuFormSchema = z.object({
   name: z
@@ -98,8 +87,6 @@ const menuFormSchema = z.object({
     .string()
     .min(1, "İşletme seçmelisiniz")
 });
-
-type MenuFormValues = z.infer<typeof menuFormSchema>;
 
 const formatCountdown = (seconds: number) => {
   const minutes = Math.floor(seconds / 60);
@@ -170,15 +157,19 @@ const Page = () => {
             name
           )
         `)
-        .order('name');
+        .order('sort_order', { ascending: true });
 
-      if (error) {
-        console.error('Error fetching menus:', error);
-        return;
-      }
+      if (error) throw error;
 
-      setMenus(data || []);
-      setBusinesses(await BusinessService.getBusinesses());
+      setMenus(data as Menu[] || []);
+
+      const { data: businessData, error: businessError } = await supabase
+        .from('businesses')
+        .select('id, name');
+
+      if (businessError) throw businessError;
+
+      setBusinesses(businessData || []);
     } catch (error) {
       toast({
         variant: "destructive",
@@ -186,26 +177,36 @@ const Page = () => {
         description: "Veriler yüklenirken bir hata oluştu.",
       });
     }
-  }, []);
+  }, [supabase]);
 
   const handleAddMenu = async (values: MenuFormValues) => {
     try {
-      const newMenu = await MenuService.createMenu(values);
+      const { data: newMenu, error } = await supabase
+        .from('menus')
+        .insert({
+          name: values.name,
+          business_id: values.business_id,
+          is_active: true as boolean | null,
+          sort_order: menus.length + 1
+        })
+        .select('*, businesses(id, name)')
+        .single();
 
-      setMenus(prev => [...prev, {
-        ...newMenu,
-        businesses: {
-          id: values.business_id,
-          name: businesses.find(b => b.id === values.business_id)?.name || ''
-        }
-      }]);
+      if (error) throw error;
 
-      toast({
-        title: "Başarılı",
-        description: "Menü başarıyla eklendi.",
-      });
-      form.reset();
-      setOpen(false);
+      if (newMenu) {
+        setMenus(prev => [...prev, {
+          ...newMenu,
+          businesses: newMenu.businesses as Pick<Database['public']['Tables']['businesses']['Row'], 'id' | 'name'>
+        }]);
+
+        toast({
+          title: "Başarılı",
+          description: "Menü başarıyla eklendi.",
+        });
+        form.reset();
+        setOpen(false);
+      }
     } catch (error) {
       toast({
         variant: "destructive",
@@ -238,20 +239,16 @@ const Page = () => {
         }));
 
         const updateDatabase = async () => {
-          const updates = updatedItems.map((item) => ({
-            id: item.id,
-            sort_order: item.sort_order,
-            is_active: item.is_active,
-            name: item.name,
-            color: item.color,
-            created_at: item.created_at,
-            cover_image: item.cover_image,
-            business_id: item.business_id
+          const updates = updatedItems.map(({ id, sort_order, name, business_id }) => ({
+            id,
+            sort_order,
+            name,
+            business_id
           }));
 
           const { error } = await supabase
             .from("menus")
-            .upsert(updates)
+            .upsert(updates, { onConflict: 'id' })
             .select();
 
           if (error) {
@@ -276,32 +273,33 @@ const Page = () => {
   };
 
   const handleActiveChange = async (id: string, checked: boolean) => {
-    const { error } = await supabase
-      .from("menus")
-      .update({ is_active: checked })
-      .eq("id", id);
+    try {
+      const { error } = await supabase
+        .from("menus")
+        .update({ is_active: checked })
+        .eq("id", id);
 
-    if (error) {
+      if (error) throw error;
+
+      setMenus((prevItems) =>
+        prevItems.map((menuItem) =>
+          menuItem.id === id
+            ? { ...menuItem, is_active: checked }
+            : menuItem
+        )
+      );
+
+      toast({
+        title: "Başarılı",
+        description: "Menü durumu güncellendi.",
+      });
+    } catch (error) {
       toast({
         variant: "destructive",
         title: "Hata",
         description: "Menü durumu güncellenirken bir hata oluştu.",
       });
-      return;
     }
-
-    setMenus((prevItems) =>
-      prevItems.map((menuItem) =>
-        menuItem.id === id
-          ? { ...menuItem, is_active: checked }
-          : menuItem
-      )
-    );
-
-    toast({
-      title: "Başarılı",
-      description: "Menü durumu güncellendi.",
-    });
   };
 
   const handleBusinessChange = async (menuId: string, businessId: string) => {
@@ -361,51 +359,9 @@ const Page = () => {
     setShowImportDialog(false);
 
     try {
-      // Seçilen işletmede "Adisyo Menü" var mı kontrol et
-      const { data: existingMenu } = await supabase
-        .from('menus')
-        .select('*')
-        .eq('name', 'Adisyo Menü')
-        .eq('business_id', selectedBusinessId)
-        .single();
-
-      let menuId: string;
-
-      if (existingMenu) {
-        menuId = existingMenu.id;
-      } else {
-        // Yeni menü oluştur
-        const { data: newMenu, error: menuError } = await supabase
-          .from('menus')
-          .insert({
-            name: 'Adisyo Menü',
-            is_active: true,
-            sort_order: menus.length + 1,
-            color: '#ffffff',
-            business_id: selectedBusinessId
-          })
-          .select('*, businesses(id, name)')
-          .single();
-
-        if (menuError) {
-          throw new Error('Menü oluşturulurken hata: ' + menuError.message);
-        }
-
-        menuId = newMenu.id;
-
-        // Menüler listesine ekle
-        setMenus(prev => [...prev, {
-          ...newMenu,
-          businesses: newMenu.businesses || {
-            id: selectedBusinessId,
-            name: businesses.find(b => b.id === selectedBusinessId)?.name || ''
-          }
-        }]);
-      }
-
-      // Import context'i güncelle
+      // Import context'i oluştur
       const importContext: ImportContext = {
-        menuId,
+        menuId: null,
         categoryIds: [],
         aborted: false,
         paused: false
@@ -420,27 +376,12 @@ const Page = () => {
         }
       );
 
-      if (result.aborted) {
-        // İptal edilirse ve yeni menüyse sil
-        if (!existingMenu) {
-          await supabase.from('menus').delete().eq('id', menuId);
-          setMenus(prev => prev.filter(item => item.id !== menuId));
-        }
-
-        toast({
-          title: "İçe Aktarma İptal Edildi",
-          description: "Menü içe aktarma işlemi iptal edildi.",
-          variant: "default"
-        });
-        return;
-      }
-
       // Başarılı import sonrası menüleri yeniden yükle
       await getMenus();
 
       toast({
         title: "Menü Aktarımı Başarılı",
-        description: `${result.stats.importedCategories}/${result.stats.totalCategories} kategori ve ${result.stats.importedProducts}/${result.stats.totalProducts} ürün aktarıldı.${result.stats.failedItems.categories.length > 0 || result.stats.failedItems.products.length > 0
+        description: `${result.stats.importedCategories} yeni kategori, ${result.stats.updatedCategories} güncellenen kategori\n${result.stats.importedProducts} yeni ürün, ${result.stats.updatedProducts} güncellenen ürün\n${result.stats.updatedPrices} fiyat güncellendi${result.stats.failedItems.categories.length > 0 || result.stats.failedItems.products.length > 0
           ? "\n\nBazı öğeler aktarılamadı."
           : ""
           }`,
@@ -485,24 +426,17 @@ const Page = () => {
 
   const handleAbortConfirm = async () => {
     try {
-      // Önce import context'i güncelle
+      // Import context'i güncelle
       setImportContext(prev => ({ ...prev, aborted: true }));
       setShowAbortDialog(false);
       setIsPaused(false);
 
       // ImportService'e iptal sinyali gönder
-      await ImportService.abortImport({
-        menuId: importContext.menuId,
-        categoryIds: importContext.categoryIds,
-        aborted: true,
-        paused: false
-      });
+      ImportService.abortImport(importContext);
 
       // Temizlik işlemleri
       if (importContext.menuId) {
-        // Yeni oluşturulan menüyü sil
-        await supabase.from('menus').delete().eq('id', importContext.menuId);
-        setMenus(prev => prev.filter(item => item.id !== importContext.menuId!));
+        await ImportService.cleanup(importContext);
       }
 
       // State'leri sıfırla
@@ -537,21 +471,31 @@ const Page = () => {
 
   const handleMoveMenu = async (menuId: string, newBusinessId: string) => {
     try {
-      const result = await MenuService.moveMenuToBusiness(menuId, newBusinessId);
+      const { error } = await supabase
+        .from('menus')
+        .update({ business_id: newBusinessId })
+        .eq('id', menuId);
+
+      if (error) throw error;
+
+      const targetBusiness = businesses.find(b => b.id === newBusinessId);
 
       setMenus(prev => prev.map(menu =>
         menu.id === menuId
           ? {
             ...menu,
             business_id: newBusinessId,
-            businesses: businesses.find(b => b.id === newBusinessId) || menu.businesses
+            businesses: {
+              id: newBusinessId,
+              name: targetBusiness?.name || menu.businesses.name
+            }
           }
           : menu
       ));
 
       toast({
         title: "Başarılı",
-        description: `Menü başarıyla ${result.businessName} işletmesine taşındı.`,
+        description: `Menü başarıyla ${targetBusiness?.name} işletmesine taşındı.`,
       });
       setMoveMenuId(null);
     } catch (error) {
@@ -764,7 +708,7 @@ const Page = () => {
                       <div className="flex items-center gap-4 pl-4 border-l">
                         <div className="flex items-center gap-2">
                           <Switch
-                            checked={item.is_active}
+                            checked={item.is_active ?? false}
                             onCheckedChange={(checked) => handleActiveChange(item.id, checked)}
                           />
                           <span className="text-sm font-medium text-muted-foreground">

@@ -10,11 +10,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import Image from "next/image";
-import type {
-  CategoryWithProducts,
-  Unit,
-  ProductWithDetails,
-} from "@/types/database";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Plus, X, PlusCircle, Check, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -29,21 +24,23 @@ import {
   type ProductFormValues,
 } from "@/lib/validations/product";
 import { ProductService } from "@/lib/services/product-service";
-import { ProductForm } from "../forms/product-form";
+import { AddProductForm } from "../forms/add-product-form";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useRouter } from "next/navigation";
-import { CategoryService } from "@/lib/services/category-service";
+import { CategoryService, CategoryWithProducts } from "@/lib/services/category-service";
+import { Tables, Database } from '@/lib/types/supabase';
+import { FormProductImage } from "@/lib/types/image";
+import { ProductWithRelations } from "@/lib/services/product-service";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 const CategoryDetail = ({ id }: { id: string }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [category, setCategory] = useState<CategoryWithProducts | null>(null);
-  const [units, setUnits] = useState<Unit[]>([]);
-  const [sortedProducts, setSortedProducts] = useState<ProductWithDetails[]>(
-    []
-  );
+  const [units, setUnits] = useState<Tables<"units">[]>([]);
+  const [sortedProducts, setSortedProducts] = useState<ProductWithRelations[]>([]);
   const [addProductDialogOpen, setAddProductDialogOpen] = useState(false);
 
   const { toast } = useToast();
@@ -54,154 +51,40 @@ const CategoryDetail = ({ id }: { id: string }) => {
     resolver: zodResolver(productFormSchema),
     defaultValues: {
       name: "",
+      description: "",
       color: "",
       calories: 0,
       preparing_time: 0,
       allergens: [],
       tags: [],
-      unit_id: "",
-      price: 0,
-      description: "",
+      prices: [{
+        unit_id: "",
+        price: 0
+      }],
+      is_active: true,
+      sort_order: 0,
+      category_id: id
     },
   });
-
-  const handleImageDrop = async (acceptedFiles: File[]) => {
-    const file = acceptedFiles[0];
-    if (!file) return;
-
-    setIsUploading(true);
-    try {
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${id}-${Date.now()}.${fileExt}`;
-
-      const { data, error: uploadError } = await supabase.storage
-        .from("category-images")
-        .upload(fileName, file, {
-          cacheControl: "3600",
-          upsert: true,
-        });
-
-      if (uploadError) throw uploadError;
-
-      if (!data?.path) throw new Error("Dosya yolu alınamadı");
-
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from("category-images").getPublicUrl(data.path);
-
-      const { error: updateError } = await supabase
-        .from("categories")
-        .update({ cover_image: publicUrl })
-        .eq("id", id);
-
-      if (updateError) throw updateError;
-
-      toast({
-        title: "Başarılı",
-        description: "Fotoğraf başarıyla güncellendi",
-      });
-
-      setCategory((prev) =>
-        prev ? { ...prev, cover_image: publicUrl } : null
-      );
-    } catch (error) {
-      console.error("Error details:", error);
-      toast({
-        variant: "destructive",
-        title: "Hata",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Fotoğraf yüklenirken bir hata oluştu",
-      });
-    } finally {
-      setIsUploading(false);
-    }
-  };
 
   const fetchCategory = async () => {
     setIsLoading(true);
     try {
-      const { data: category, error: categoryError } = await supabase
-        .from("categories")
-        .select("*")
-        .eq("id", id)
-        .single();
-
-      if (categoryError) {
-        console.error("Category fetch error:", categoryError);
-        throw categoryError;
-      }
-
-      const { data: products, error: productsError } = await supabase
-        .from("products")
-        .select(`
-          *,
-          product_prices!product_prices_product_id_fkey (
-            id,
-            price,
-            unit_id,
-            units!product_prices_unit_id_fkey (
-              id,
-              name
-            )
-          ),
-          product_allergens!product_allergens_product_id_fkey (
-            id,
-            allergen
-          ),
-          product_tags!product_tags_product_id_fkey (
-            id,
-            tag_type
-          ),
-          product_images!product_images_product_id_fkey (
-            id,
-            image_url,
-            is_cover,
-            sort_order
-          )
-        `)
-        .eq("category_id", id)
-        .order("sort_order");
-
-      if (productsError) {
-        console.error("Products fetch error:", productsError);
-        throw productsError;
-      }
-
-      const categoryWithProducts = {
-        ...category,
-        products: products || []
-      };
-
-      setCategory(categoryWithProducts);
-      setSortedProducts(products || []);
+      const categoryData = await CategoryService.getCategory(id);
+      setCategory(categoryData);
+      const sortedProductsData = [...(categoryData.products || [])].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+      setSortedProducts(sortedProductsData);
     } catch (error) {
-      console.error("Kategori çekme hatası:", error);
-      throw error;
+      console.error('Kategori yükleme hatası:', error);
+      toast({
+        variant: "destructive",
+        title: "Hata",
+        description: error instanceof Error ? error.message : "Kategori bilgileri yüklenemedi",
+      });
     } finally {
       setIsLoading(false);
     }
   };
-
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        await fetchCategory();
-      } catch (error) {
-        console.error("Kategori yükleme hatası:", error);
-        toast({
-          variant: "destructive",
-          title: "Hata",
-          description: "Kategori bilgileri yüklenemedi",
-        });
-      }
-    };
-
-    if (id) {
-      loadData();
-    }
-  }, [id, supabase, toast]);
 
   useEffect(() => {
     const fetchUnits = async () => {
@@ -225,14 +108,52 @@ const CategoryDetail = ({ id }: { id: string }) => {
     fetchUnits();
   }, [supabase, toast]);
 
+  const handleImageDrop = async (acceptedFiles: File[]) => {
+    const file = acceptedFiles[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const publicUrl = await CategoryService.uploadCategoryImage(file, id);
+      setCategory((prev) => prev ? { ...prev, cover_image: publicUrl } : null);
+
+      toast({
+        title: "Başarılı",
+        description: "Fotoğraf başarıyla güncellendi",
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Hata",
+        description: error instanceof Error ? error.message : "Fotoğraf yüklenirken bir hata oluştu",
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        await fetchCategory();
+      } catch (error) {
+        console.error("Kategori yükleme hatası:", error);
+        toast({
+          variant: "destructive",
+          title: "Hata",
+          description: "Kategori bilgileri yüklenemedi",
+        });
+      }
+    };
+
+    if (id) {
+      loadData();
+    }
+  }, [id, supabase, toast]);
+
   const handleNameChange = async (newName: string) => {
     try {
-      const { error } = await supabase
-        .from("categories")
-        .update({ name: newName })
-        .eq("id", id);
-
-      if (error) throw error;
+      await CategoryService.updateCategoryName(id, newName);
 
       setCategory((prev) => (prev ? { ...prev, name: newName } : null));
 
@@ -250,29 +171,56 @@ const CategoryDetail = ({ id }: { id: string }) => {
     }
   };
 
-  const handleProductSubmit = async (data: ProductFormValues) => {
+  const handleProductSubmit = async (data: ProductFormValues, images?: FormProductImage[]) => {
+    setIsSubmitting(true);
     try {
-      const result = await ProductService.createProduct(data, id);
+      const maxSortOrder = sortedProducts.reduce((max, product) => Math.max(max, product.sort_order ?? 0), 0);
+
+      const result = await ProductService.createProduct({
+        name: data.name,
+        description: data.description,
+        color: data.color,
+        calories: data.calories,
+        preparing_time: data.preparing_time,
+        category_id: id,
+        is_active: true,
+        sort_order: maxSortOrder + 1,
+        allergens: data.allergens as Database["public"]["Enums"]["allergen_type"][],
+        tags: data.tags as Database["public"]["Enums"]["product_tag_type"][],
+        prices: data.prices.map(price => ({
+          unit_id: price.unit_id,
+          price: price.price
+        }))
+      });
+
+      if (images && images.length > 0) {
+        for (const image of images) {
+          if (image.file) {
+            await ProductService.uploadProductImage(
+              result.id,
+              image.file,
+              image.is_cover
+            );
+          }
+        }
+      }
 
       toast({
         title: "Başarılı",
         description: "Ürün başarıyla eklendi",
       });
 
-      // Dialog'u kapatmadan önce küçük bir gecikme ekle
-      await new Promise(resolve => setTimeout(resolve, 100));
       setAddProductDialogOpen(false);
       await fetchCategory();
-
-      return result;
     } catch (error) {
-      console.error('Ürün ekleme hatası:', error);
+      console.error("Product submit error:", error);
       toast({
         variant: "destructive",
         title: "Hata",
-        description: "Ürün eklenirken bir hata oluştu",
+        description: error instanceof Error ? error.message : "Ürün eklenirken bir hata oluştu",
       });
-      throw error;
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -293,7 +241,6 @@ const CategoryDetail = ({ id }: { id: string }) => {
 
       await fetchCategory();
     } catch (error) {
-      console.error('Ürün silme hatası:', error);
       toast({
         variant: "destructive",
         title: "Hata",
@@ -302,18 +249,31 @@ const CategoryDetail = ({ id }: { id: string }) => {
     }
   };
 
-  const handleProductStatusChange = (productId: string, newStatus: boolean) => {
-    if (category) {
-      setCategory((prev) => {
-        if (!prev) return prev;
+  const handleProductStatusChange = async (productId: string, newStatus: boolean) => {
+    try {
+      await ProductService.updateProductStatus(productId, newStatus);
+
+      setCategory(prev => {
+        if (!prev) return null;
         return {
           ...prev,
-          products: prev.products.map((product) =>
+          products: prev.products.map(product =>
             product.id === productId
               ? { ...product, is_active: newStatus }
               : product
-          ) as ProductWithDetails[],
+          )
         };
+      });
+
+      toast({
+        title: "Başarılı",
+        description: "Ürün durumu güncellendi",
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Hata",
+        description: "Ürün durumu güncellenirken bir hata oluştu",
       });
     }
   };
@@ -322,13 +282,14 @@ const CategoryDetail = ({ id }: { id: string }) => {
     try {
       const menuId = category?.menu_id;
       await CategoryService.deleteCategory(id);
+
       toast({
         title: "Başarılı",
         description: "Kategori ve ilişkili tüm veriler başarıyla silindi",
       });
+
       router.push(`/dashboard/menu/${menuId}`);
     } catch (error) {
-      console.error('Kategori silme hatası:', error);
       toast({
         variant: "destructive",
         title: "Hata",
@@ -413,10 +374,11 @@ const CategoryDetail = ({ id }: { id: string }) => {
                 </DialogTitle>
               </DialogHeader>
 
-              <ProductForm
+              <AddProductForm
                 onSubmit={handleProductSubmit}
                 units={units}
                 onCancel={() => setAddProductDialogOpen(false)}
+                isSubmitting={isSubmitting}
               />
             </DialogContent>
           </Dialog>

@@ -1,6 +1,6 @@
 "use client";
 
-import { MenuSettings, Menu } from "@/types/database";
+import { Database } from "@/lib/types/supabase";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
@@ -8,9 +8,11 @@ import { useMenu } from "@/contexts/menu-context";
 
 const Lottie = dynamic(() => import("lottie-react"), { ssr: false });
 
+type Tables = Database["public"]["Tables"];
+
 interface MenuWelcomeProps {
-    settings: MenuSettings;
-    menus: Menu[];
+    settings: Tables["menu_settings"]["Row"];
+    menus: Tables["menus"]["Row"][];
 }
 
 export function MenuWelcome({ settings, menus }: MenuWelcomeProps) {
@@ -24,7 +26,11 @@ export function MenuWelcome({ settings, menus }: MenuWelcomeProps) {
         if (settings.loader_url?.endsWith('.json')) {
             fetch(settings.loader_url)
                 .then(res => res.json())
-                .then(data => setLoaderAnimation(data));
+                .then(data => setLoaderAnimation(data))
+                .catch(error => {
+                    console.error('Loader animasyonu yüklenirken hata:', error);
+                    setShowLoader(false);
+                });
         }
 
         // 2 saniye sonra loader'ı kaldır
@@ -46,7 +52,7 @@ export function MenuWelcome({ settings, menus }: MenuWelcomeProps) {
                     />
                 ) : (
                     <img
-                        src={settings.loader_url}
+                        src={settings.loader_url || ''}
                         alt="Loading..."
                         className="w-48 h-48 object-contain"
                     />
@@ -56,11 +62,11 @@ export function MenuWelcome({ settings, menus }: MenuWelcomeProps) {
     }
 
     const backgroundStyle = settings.background_type === 'color'
-        ? { backgroundColor: settings.background_color }
-        : { backgroundImage: `url(${settings.background_url})` };
+        ? { backgroundColor: settings.background_color || '#FFFFFF' }
+        : { backgroundImage: `url(${settings.background_url || ''})` };
 
     // Font class'ını al
-    const getFontVariable = (fontName: string | undefined) => {
+    const getFontVariable = (fontName: string | null) => {
         switch (fontName) {
             case 'inter': return 'var(--font-inter)';
             case 'poppins': return 'var(--font-poppins)';
@@ -91,15 +97,15 @@ export function MenuWelcome({ settings, menus }: MenuWelcomeProps) {
             ) : (
                 <h1
                     className={`text-3xl font-bold mb-6`}
-                    style={{ color: settings.welcome_color }}
-                    dangerouslySetInnerHTML={{ __html: settings.welcome_title }}
+                    style={{ color: settings.welcome_color || '#000000' }}
+                    dangerouslySetInnerHTML={{ __html: settings.welcome_title || '' }}
                 />
             )}
 
             {settings.welcome_text && (
                 <div
                     className={`mb-8 text-sm`}
-                    style={{ color: settings.welcome_color }}
+                    style={{ color: settings.welcome_color || '#000000' }}
                     dangerouslySetInnerHTML={{ __html: settings.welcome_text }}
                 />
             )}
@@ -108,12 +114,12 @@ export function MenuWelcome({ settings, menus }: MenuWelcomeProps) {
                 onClick={() => setDrawerOpen(true)}
                 className="px-8 py-3 rounded-lg transition-all text-sm"
                 style={{
-                    backgroundColor: settings.button_color,
-                    color: settings.button_text_color,
+                    backgroundColor: settings.button_color || '#000000',
+                    color: settings.button_text_color || '#FFFFFF',
                     fontFamily: buttonFont
                 }}
             >
-                {settings.button_text}
+                {settings.button_text || 'Menüyü İncele'}
             </button>
         </div>
     );

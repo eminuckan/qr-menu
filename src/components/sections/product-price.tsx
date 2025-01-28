@@ -1,6 +1,6 @@
-import { ProductWithDetails } from "@/types/database";
+import { ProductWithRelations } from "@/lib/services/product-service";
 
-export const ProductPrice = ({ product }: { product: ProductWithDetails }) => {
+export const ProductPrice = ({ product }: { product: ProductWithRelations }) => {
   const mainPrice = product.product_prices?.[0];
 
   console.log('mainPrice:', mainPrice);
@@ -16,7 +16,7 @@ export const ProductPrice = ({ product }: { product: ProductWithDetails }) => {
         })}₺
       </span>
       <span className="text-muted-foreground text-sm">
-        / {mainPrice.units?.name || '-'}
+        / {mainPrice.unit?.name || '-'}
       </span>
     </div>
   );
