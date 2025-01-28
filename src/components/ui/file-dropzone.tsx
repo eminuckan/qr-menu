@@ -3,7 +3,7 @@ import { useDropzone, DropzoneOptions } from "react-dropzone"
 import { AlertCircle, Loader2 } from "lucide-react"
 import { Alert, AlertDescription } from "./alert"
 import { cn } from "@/lib/utils"
-import { useToast } from "@/hooks/use-toast"
+import toast from "react-hot-toast"
 
 interface FileDropzoneProps extends DropzoneOptions {
   onDrop: (files: File[]) => void
@@ -32,7 +32,6 @@ export const FileDropzone = ({
   children,
   fileType = 'image'
 }: FileDropzoneProps) => {
-  const { toast } = useToast()
 
   const validateFile = (file: File): Promise<boolean> => {
     return new Promise((resolve) => {
@@ -43,11 +42,7 @@ export const FileDropzone = ({
         img.onload = () => {
           URL.revokeObjectURL(img.src)
           if (img.width < minWidth || img.height < minHeight) {
-            toast({
-              variant: "destructive",
-              title: "Hata",
-              description: `Fotoğraf boyutları minimum ${minWidth}x${minHeight} piksel olmalıdır.`,
-            })
+            toast.error(`Fotoğraf boyutları minimum ${minWidth}x${minHeight} piksel olmalıdır.`);
             resolve(false)
           }
           resolve(true)
@@ -55,11 +50,7 @@ export const FileDropzone = ({
 
         img.onerror = () => {
           URL.revokeObjectURL(img.src)
-          toast({
-            variant: "destructive",
-            title: "Hata",
-            description: "Fotoğraf yüklenirken bir hata oluştu.",
-          })
+          toast.error("Fotoğraf yüklenirken bir hata oluştu.");
           resolve(false)
         }
       } else {
@@ -91,20 +82,12 @@ export const FileDropzone = ({
       fileRejections.forEach((rejection) => {
         const { errors } = rejection
         if (errors[0]?.code === "file-too-large") {
-          toast({
-            variant: "destructive",
-            title: "Hata",
-            description: `Dosya boyutu ${(maxSize / 1024 / 1024).toFixed(0)}MB'dan küçük olmalıdır.`,
-          })
+          toast.error(`Dosya boyutu ${(maxSize / 1024 / 1024).toFixed(0)}MB'dan küçük olmalıdır.`);
         }
       })
     },
     onError: () => {
-      toast({
-        variant: "destructive",
-        title: "Hata",
-        description: fileType === 'animation' ? "Animasyon dosyası yüklenirken bir hata oluştu." : "Fotoğraf yüklenirken bir hata oluştu.",
-      })
+      toast.error(fileType === 'animation' ? "Animasyon dosyası yüklenirken bir hata oluştu." : "Fotoğraf yüklenirken bir hata oluştu.");
     },
   })
 

@@ -5,7 +5,7 @@ import { Tables } from "@/lib/types/supabase";
 import { QRService } from "@/lib/services/qr-service";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
+import toast from "react-hot-toast";
 import {
     Select,
     SelectContent,
@@ -34,7 +34,6 @@ export const QRList = ({
 }) => {
     const [qrCodes, setQRCodes] = useState<Tables<'qr_codes'>[]>([]);
     const [qrToDelete, setQrToDelete] = useState<Tables<'qr_codes'> | null>(null);
-    const { toast } = useToast();
 
     useEffect(() => {
         if (selectedBusinessId) {
@@ -47,11 +46,7 @@ export const QRList = ({
             const codes = await QRService.getQRCodes(businessId);
             setQRCodes(codes);
         } catch (error) {
-            toast({
-                title: "Hata",
-                description: "QR kodları yüklenirken bir hata oluştu",
-                variant: "destructive"
-            });
+            toast.error("QR kodları yüklenirken bir hata oluştu");
         }
     };
 
@@ -61,16 +56,9 @@ export const QRList = ({
         try {
             await QRService.deleteQRCode(qrToDelete.id);
             setQRCodes(qrCodes.filter(qr => qr.id !== qrToDelete.id));
-            toast({
-                title: "Başarılı",
-                description: "QR kod başarıyla silindi",
-            });
+            toast.success("QR kod başarıyla silindi");
         } catch (error) {
-            toast({
-                title: "Hata",
-                description: "QR kod silinirken bir hata oluştu",
-                variant: "destructive"
-            });
+            toast.error("QR kod silinirken bir hata oluştu");
         } finally {
             setQrToDelete(null);
         }
@@ -82,11 +70,7 @@ export const QRList = ({
             const path = type === 'svg' ? qr.svg_path : qr.pdf_path;
 
             if (!path) {
-                toast({
-                    title: "Hata",
-                    description: `${type.toUpperCase()} dosyası bulunamadı`,
-                    variant: "destructive"
-                });
+                toast.error(`${type.toUpperCase()} dosyası bulunamadı`);
                 return;
             }
 
@@ -110,11 +94,7 @@ export const QRList = ({
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
         } catch (error) {
-            toast({
-                title: "Hata",
-                description: "Dosya indirilirken bir hata oluştu",
-                variant: "destructive"
-            });
+            toast.error("Dosya indirilirken bir hata oluştu");
         }
     };
 

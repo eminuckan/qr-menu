@@ -11,10 +11,10 @@ import { MultiSelectInput } from "@/components/ui/multi-select-input";
 import { TiptapEditor } from "@/components/ui/tiptap-editor";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { UnitSelect } from "@/components/ui/unit-select";
-import { useToast } from "@/hooks/use-toast";
 import { Tables, Database } from '@/lib/types/supabase';
 import { Loader2, Check } from "lucide-react";
 import { AllergenLabels, ProductTagLabels } from "@/lib/constants";
+import toast from "react-hot-toast";
 
 interface AddProductFormProps {
     units: Tables<'units'>[];
@@ -29,7 +29,6 @@ export function AddProductForm({
     onCancel,
     isSubmitting = false,
 }: AddProductFormProps) {
-    const { toast } = useToast();
     const form = useForm<ProductFormValues>({
         resolver: zodResolver(productFormSchema),
         defaultValues: {
@@ -56,11 +55,7 @@ export function AddProductForm({
             form.reset();
         } catch (error) {
             console.error("Form submit error:", error);
-            toast({
-                variant: "destructive",
-                title: "Hata",
-                description: error instanceof Error ? error.message : "Ürün kaydedilirken bir hata oluştu"
-            });
+            toast.error(error instanceof Error ? error.message : "Ürün kaydedilirken bir hata oluştu");
         }
     };
 

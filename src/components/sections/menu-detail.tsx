@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useForm } from "react-hook-form";
-import { useToast } from "@/hooks/use-toast";
+import toast from "react-hot-toast";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -166,7 +166,6 @@ export function MenuDetail({ id }: MenuDetailProps) {
   const [error, setError] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const form = useForm<CategoryFormData>();
-  const { toast } = useToast();
   const [activeId, setActiveId] = useState<string | null>(null);
   const router = useRouter();
 
@@ -210,19 +209,12 @@ export function MenuDetail({ id }: MenuDetailProps) {
 
       setCategories(prev => [...prev, { ...newCategory, products: [] }]);
 
-      toast({
-        title: "Başarılı",
-        description: "Kategori başarıyla eklendi",
-      });
+      toast.success('Kategori başarıyla eklendi');
 
       setIsOpen(false);
       form.reset();
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Hata",
-        description: "Kategori eklenirken bir hata oluştu",
-      });
+      toast.error('Kategori eklenirken bir hata oluştu');
     }
   };
 
@@ -258,16 +250,9 @@ export function MenuDetail({ id }: MenuDetailProps) {
 
             await MenuService.updateCategoryOrder(updateData);
 
-            toast({
-              title: "Başarılı",
-              description: "Kategori sıralaması güncellendi.",
-            });
+            toast.success('Kategori sıralaması güncellendi');
           } catch (error) {
-            toast({
-              variant: "destructive",
-              title: "Hata",
-              description: "Kategori sıralaması güncellenirken bir hata oluştu.",
-            });
+            toast.error('Kategori sıralaması güncellenirken bir hata oluştu');
           }
         };
 
@@ -291,26 +276,15 @@ export function MenuDetail({ id }: MenuDetailProps) {
         )
       );
 
-      toast({
-        title: "Başarılı",
-        description: "Kategori durumu güncellendi.",
-      });
+      toast.success('Kategori durumu güncellendi');
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Hata",
-        description: "Kategori durumu güncellenirken bir hata oluştu.",
-      });
+      toast.error('Kategori durumu güncellenirken bir hata oluştu');
     }
   };
 
   const handleNameChange = async (newName: string) => {
     if (!newName.trim()) {
-      toast({
-        variant: "destructive",
-        title: "Hata",
-        description: "Menü adı boş olamaz",
-      });
+      toast.error('Menü adı boş olamaz');
       return;
     }
 
@@ -319,16 +293,9 @@ export function MenuDetail({ id }: MenuDetailProps) {
 
       setMenu(prev => prev ? { ...prev, name: newName.trim() } : null);
 
-      toast({
-        title: "Başarılı",
-        description: "Menü adı güncellendi",
-      });
+      toast.success('Menü adı güncellendi');
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Hata",
-        description: "Menü adı güncellenirken bir hata oluştu",
-      });
+      toast.error('Menü adı güncellenirken bir hata oluştu');
     }
   };
 
@@ -336,19 +303,12 @@ export function MenuDetail({ id }: MenuDetailProps) {
     try {
       await MenuService.deleteMenu(id);
 
-      toast({
-        title: "Başarılı",
-        description: "Menü ve ilişkili tüm veriler başarıyla silindi",
-      });
+      toast.success('Menü ve ilişkili tüm veriler başarıyla silindi');
 
       router.push('/dashboard/menu');
     } catch (error) {
       console.error('Menü silme hatası:', error);
-      toast({
-        variant: "destructive",
-        title: "Hata",
-        description: error instanceof Error ? error.message : "Menü silinirken bir hata oluştu",
-      });
+      toast.error(error instanceof Error ? error.message : 'Menü silinirken bir hata oluştu');
     }
   };
 

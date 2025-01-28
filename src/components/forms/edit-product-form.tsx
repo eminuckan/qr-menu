@@ -13,11 +13,11 @@ import { FileDropzone } from "@/components/ui/file-dropzone";
 import { useEffect, useState } from "react";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { UnitSelect } from "@/components/ui/unit-select";
-import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Tables, Database } from '@/lib/types/supabase';
 import { Loader2, Check, X } from "lucide-react";
 import { AllergenLabels, ProductTagLabels } from "@/lib/constants";
+import toast from "react-hot-toast";
 
 type ProductWithDetails = Tables<'products'> & {
     product_allergens: Tables<'product_allergens'>[];
@@ -52,7 +52,6 @@ export function EditProductForm({
     isSubmitting = false,
 }: EditProductFormProps) {
     const [productImages, setProductImages] = useState<FormProductImage[]>([]);
-    const { toast } = useToast();
 
     const defaultValues: ProductFormValues = {
         name: product.name,
@@ -169,11 +168,7 @@ export function EditProductForm({
             setProductImages([]);
         } catch (error) {
             console.error("Form submit error:", error);
-            toast({
-                variant: "destructive",
-                title: "Hata",
-                description: error instanceof Error ? error.message : "Ürün kaydedilirken bir hata oluştu"
-            });
+            toast.error(error instanceof Error ? error.message : "Ürün kaydedilirken bir hata oluştu");
         }
     };
 

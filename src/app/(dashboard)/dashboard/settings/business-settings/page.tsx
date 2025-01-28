@@ -12,7 +12,6 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { BusinessService } from "@/lib/services/business-service";
 import { businessFormSchema, type BusinessFormValues } from "@/lib/validations/business";
@@ -38,6 +37,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useBusinessContext } from "@/lib/contexts/business-context";
 import { Tables } from "@/lib/types/supabase";
+import toast from "react-hot-toast";
 
 type BusinessWithUsers = Tables<'businesses'> & {
     business_users: Tables<'business_users'>[];
@@ -46,7 +46,7 @@ type BusinessWithUsers = Tables<'businesses'> & {
 export default function BusinessSettingsPage() {
     const [businesses, setBusinesses] = useState<BusinessWithUsers[]>([]);
     const [loading, setLoading] = useState(true);
-    const { toast } = useToast();
+
     const router = useRouter();
     const [editingBusiness, setEditingBusiness] = useState<BusinessWithUsers | null>(null);
     const [deletingBusiness, setDeletingBusiness] = useState<BusinessWithUsers | null>(null);
@@ -72,11 +72,7 @@ export default function BusinessSettingsPage() {
                 const data = await BusinessService.getBusinesses();
                 setBusinesses(data as BusinessWithUsers[]);
             } catch (error) {
-                toast({
-                    variant: "destructive",
-                    title: "Hata",
-                    description: "İşletmeler yüklenirken bir hata oluştu.",
-                });
+                toast.error("İşletmeler yüklenirken bir hata oluştu.");
             } finally {
                 setLoading(false);
             }
@@ -97,21 +93,14 @@ export default function BusinessSettingsPage() {
             // Context'i güncelle
             setHasBusiness(true);
 
-            toast({
-                title: "Başarılı",
-                description: "İşletme başarıyla oluşturuldu.",
-            });
+            toast.success("İşletme başarıyla oluşturuldu.");
 
             router.refresh();
         } catch (error) {
             console.error('Business creation error:', error);
-            toast({
-                variant: "destructive",
-                title: "Hata",
-                description: error instanceof Error
-                    ? error.message
-                    : "İşletme oluşturulurken bir hata oluştu.",
-            });
+            toast.error(error instanceof Error
+                ? error.message
+                : "İşletme oluşturulurken bir hata oluştu.");
         }
     };
 

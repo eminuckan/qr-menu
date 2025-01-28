@@ -14,7 +14,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Trash, GripVertical } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import toast from "react-hot-toast";
 import { DndProvider } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
 import { useDrag, useDrop } from 'react-dnd'
@@ -132,7 +132,6 @@ interface ProductsTableProps {
 const ProductsTable = ({ products, onDelete, onStatusChange, onUpdate, units }: ProductsTableProps) => {
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [localProducts, setLocalProducts] = useState(products);
-  const { toast } = useToast();
   const supabase = createClient();
 
   useEffect(() => {
@@ -169,11 +168,7 @@ const ProductsTable = ({ products, onDelete, onStatusChange, onUpdate, units }: 
       );
 
       console.error("Error updating product status:", error);
-      toast({
-        variant: "destructive",
-        title: "Hata",
-        description: "Ürün durumu güncellenirken bir hata oluştu",
-      });
+      toast.error('Ürün durumu güncellenirken bir hata oluştu');
     }
   };
 
@@ -198,25 +193,18 @@ const ProductsTable = ({ products, onDelete, onStatusChange, onUpdate, units }: 
       } catch (error: any) {
         console.error('Error details:', error);
         setLocalProducts(products);
-        toast({
-          variant: "destructive",
-          title: "Hata",
-          description: error?.message || "Sıralama güncellenirken bir hata oluştu",
-        });
+        toast.error(error?.message || 'Sıralama güncellenirken bir hata oluştu');
       }
     },
-    [localProducts, products, supabase, toast]
+    [localProducts, products, supabase]
   );
 
   const handleDragEnd = useCallback(
     (dragIndex: number, hoverIndex: number) => {
       const draggedProduct = localProducts[dragIndex];
-      toast({
-        title: "Sıralama güncellendi",
-        description: `"${draggedProduct.name}" ${dragIndex + 1}. sıradan ${hoverIndex + 1}. sıraya taşındı`,
-      });
+      toast.success(`"${draggedProduct.name}" ${dragIndex + 1}. sıradan ${hoverIndex + 1}. sıraya taşındı`);
     },
-    [localProducts, toast]
+    [localProducts]
   );
 
   const columns: ColumnDef<ProductWithRelations>[] = [

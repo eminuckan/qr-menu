@@ -1,16 +1,14 @@
 "use client"
 
-import { useToast } from "@/hooks/use-toast";
 import { ProductFormValues } from "@/lib/validations/product";
 import { Database } from "@/lib/types/supabase";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../ui/dialog";
 import { Button } from "../ui/button";
-import {
-  EditProductForm
-} from "../forms/edit-product-form";
+import { EditProductForm } from "../forms/edit-product-form";
 import { ProductService } from "@/lib/services/product-service";
 import { FormProductImage } from "@/lib/types/image";
+import toast from "react-hot-toast";
 
 type Tables = Database["public"]["Tables"];
 
@@ -32,7 +30,6 @@ export const ProductActions = ({
   units,
   onUpdate
 }: ProductActionsProps) => {
-  const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -78,10 +75,7 @@ export const ProductActions = ({
         }
       }
 
-      toast({
-        title: "Başarılı",
-        description: "Ürün başarıyla güncellendi",
-      });
+      toast.success('Ürün başarıyla güncellendi');
 
       await new Promise(resolve => setTimeout(resolve, 100));
       setOpen(false);
@@ -89,11 +83,7 @@ export const ProductActions = ({
 
     } catch (error) {
       console.error('Güncelleme hatası:', error);
-      toast({
-        title: "Ürün güncellenemedi",
-        description: "Ürün güncellenirken bir hata oluştu.",
-        variant: "destructive",
-      });
+      toast.error('Ürün güncellenirken bir hata oluştu');
     } finally {
       setIsSubmitting(false);
     }

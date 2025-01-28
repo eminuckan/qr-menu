@@ -4,18 +4,18 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MenuCustomization } from "@/components/sections/menu-customization";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
+
 import { MenuSettingsService } from "@/lib/services/menu-settings-service";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tables } from "@/lib/types/supabase";
 import { BusinessService } from "@/lib/services/business-service";
 import { Loading } from "@/components/ui/loading";
+import toast from "react-hot-toast";
 
 export default function MenuSettingsPage() {
     const [businesses, setBusinesses] = useState<Tables<'businesses'>[]>([]);
     const [selectedBusinessId, setSelectedBusinessId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const { toast } = useToast();
     const router = useRouter();
 
     useEffect(() => {
@@ -33,11 +33,7 @@ export default function MenuSettingsPage() {
                 // Varsayılan olarak ilk işletmeyi seç
                 setSelectedBusinessId(businesses[0].id);
             } catch (error) {
-                toast({
-                    title: "Hata",
-                    description: "İşletme bilgileri alınırken bir hata oluştu",
-                    variant: "destructive",
-                });
+                toast.error("İşletme bilgileri alınırken bir hata oluştu");
             } finally {
                 setIsLoading(false);
             }
@@ -51,11 +47,7 @@ export default function MenuSettingsPage() {
         try {
             setSelectedBusinessId(businessId);
         } catch (error) {
-            toast({
-                title: "Hata",
-                description: "İşletme değiştirilirken bir hata oluştu",
-                variant: "destructive",
-            });
+            toast.error("İşletme değiştirilirken bir hata oluştu");
         }
     };
 

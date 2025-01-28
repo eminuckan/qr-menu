@@ -12,8 +12,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from "./select";
-import { useToast } from "@/hooks/use-toast";
 import { Tables } from "@/lib/types/supabase";
+import toast from "react-hot-toast";
 
 interface UnitSelectProps {
     units: Tables<'units'>[];
@@ -26,7 +26,6 @@ export function UnitSelect({ units, value, onValueChange, onUnitAdded }: UnitSel
     const [isCreating, setIsCreating] = useState(false);
     const [newUnitName, setNewUnitName] = useState("");
     const [isLoading, setIsLoading] = useState(false);
-    const { toast } = useToast();
 
     const handleAddUnit = async () => {
         if (!newUnitName.trim()) return;
@@ -38,17 +37,10 @@ export function UnitSelect({ units, value, onValueChange, onUnitAdded }: UnitSel
             onValueChange(newUnit.id);
             setIsCreating(false);
             setNewUnitName("");
-            toast({
-                title: "Başarılı",
-                description: "Birim başarıyla eklendi",
-            });
+            toast.success("Birim başarıyla eklendi");
         } catch (error) {
             console.error('Birim ekleme hatası:', error);
-            toast({
-                variant: "destructive",
-                title: "Hata",
-                description: error instanceof Error ? error.message : "Birim eklenirken bir hata oluştu",
-            });
+            toast.error(error instanceof Error ? error.message : "Birim eklenirken bir hata oluştu");
         } finally {
             setIsLoading(false);
         }

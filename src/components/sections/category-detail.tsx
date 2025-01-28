@@ -12,7 +12,6 @@ import {
 import Image from "next/image";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Plus, X, PlusCircle, Check, Trash2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 import { createClient } from "@/lib/supabase/client";
 import PageHeader from "@/components/layout/page-header";
 import ProductsTable from "@/components/sections/products-table";
@@ -31,6 +30,7 @@ import { CategoryService, CategoryWithProducts } from "@/lib/services/category-s
 import { Tables, Database } from '@/lib/types/supabase';
 import { FormProductImage } from "@/lib/types/image";
 import { ProductWithRelations } from "@/lib/services/product-service";
+import toast from "react-hot-toast";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
@@ -43,7 +43,6 @@ const CategoryDetail = ({ id }: { id: string }) => {
   const [sortedProducts, setSortedProducts] = useState<ProductWithRelations[]>([]);
   const [addProductDialogOpen, setAddProductDialogOpen] = useState(false);
 
-  const { toast } = useToast();
   const supabase = createClient();
   const router = useRouter();
 
@@ -76,11 +75,7 @@ const CategoryDetail = ({ id }: { id: string }) => {
       setSortedProducts(sortedProductsData);
     } catch (error) {
       console.error('Kategori yükleme hatası:', error);
-      toast({
-        variant: "destructive",
-        title: "Hata",
-        description: error instanceof Error ? error.message : "Kategori bilgileri yüklenemedi",
-      });
+      toast.error(error instanceof Error ? error.message : "Kategori bilgileri yüklenemedi");
     } finally {
       setIsLoading(false);
     }

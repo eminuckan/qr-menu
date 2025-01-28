@@ -14,14 +14,13 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
+import toast from "react-hot-toast";
 
 export default function QRSettingsPage() {
     const [showCustomization, setShowCustomization] = useState(false);
     const [editingQR, setEditingQR] = useState<Tables<'qr_codes'> | null>(null);
     const [businesses, setBusinesses] = useState<Tables<'businesses'>[]>([]);
     const [selectedBusinessId, setSelectedBusinessId] = useState<string>("");
-    const { toast } = useToast();
 
     useEffect(() => {
         loadBusinesses();
@@ -37,11 +36,7 @@ export default function QRSettingsPage() {
                 setSelectedBusinessId(data[0].id);
             }
         } catch (error) {
-            toast({
-                title: "Hata",
-                description: "İşletmeler yüklenirken bir hata oluştu",
-                variant: "destructive"
-            });
+            toast.error("İşletmeler yüklenirken bir hata oluştu");
         }
     };
 

@@ -42,7 +42,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import Link from "next/link";
-import { useToast } from "@/hooks/use-toast";
 import { ImportService, ImportContext } from "@/lib/services/import-service";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { cn } from "@/lib/utils";
@@ -66,6 +65,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { useBusinessContext } from '@/lib/contexts/business-context';
 import { Database } from '@/lib/types/supabase';
+import toast from "react-hot-toast";
 
 type Menu = Database['public']['Tables']['menus']['Row'] & {
   businesses: Pick<Database['public']['Tables']['businesses']['Row'], 'id' | 'name'>;
@@ -116,7 +116,6 @@ const Page = () => {
   const [menus, setMenus] = useState<Menu[]>([]);
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [open, setOpen] = useState(false);
-  const { toast } = useToast();
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState<{
     currentCategory: string;
@@ -171,11 +170,7 @@ const Page = () => {
 
       setBusinesses(businessData || []);
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Hata",
-        description: "Veriler yüklenirken bir hata oluştu.",
-      });
+      toast.error("Veriler yüklenirken bir hata oluştu.");
     }
   }, [supabase]);
 
@@ -200,19 +195,12 @@ const Page = () => {
           businesses: newMenu.businesses as Pick<Database['public']['Tables']['businesses']['Row'], 'id' | 'name'>
         }]);
 
-        toast({
-          title: "Başarılı",
-          description: "Menü başarıyla eklendi.",
-        });
+        toast.success("Menü başarıyla eklendi.");
         form.reset();
         setOpen(false);
       }
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Hata",
-        description: error instanceof Error ? error.message : "Menü eklenirken bir hata oluştu.",
-      });
+      toast.error(error instanceof Error ? error.message : "Menü eklenirken bir hata oluştu.");
     }
   };
 
@@ -252,18 +240,11 @@ const Page = () => {
             .select();
 
           if (error) {
-            toast({
-              variant: "destructive",
-              title: "Hata",
-              description: "Menü sıralaması güncellenirken bir hata oluştu.",
-            });
+            toast.error("Menü sıralaması güncellenirken bir hata oluştu.");
             return;
           }
 
-          toast({
-            title: "Başarılı",
-            description: "Menü sıralaması güncellendi.",
-          });
+          toast.success("Menü sıralaması güncellendi.");
         };
 
         updateDatabase();
@@ -289,16 +270,9 @@ const Page = () => {
         )
       );
 
-      toast({
-        title: "Başarılı",
-        description: "Menü durumu güncellendi.",
-      });
+      toast.success("Menü durumu güncellendi.");
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Hata",
-        description: "Menü durumu güncellenirken bir hata oluştu.",
-      });
+      toast.error("Menü durumu güncellenirken bir hata oluştu.");
     }
   };
 
@@ -322,36 +296,21 @@ const Page = () => {
           : menu
       ));
 
-      toast({
-        title: "Başarılı",
-        description: "Menü başarıyla taşındı.",
-      });
+      toast.success("Menü başarıyla taşındı.");
     } catch (error) {
       console.error('Error updating menu:', error);
-      toast({
-        variant: "destructive",
-        title: "Hata",
-        description: "Menü taşınırken bir hata oluştu.",
-      });
+      toast.error("Menü taşınırken bir hata oluştu.");
     }
   };
 
   const handleImport = async () => {
     if (!hasBusiness) {
-      toast({
-        variant: "destructive",
-        title: "Hata",
-        description: "Menü içe aktarma için en az bir işletme kaydının olması gerekiyor.",
-      });
+      toast.error("Menü içe aktarma için en az bir işletme kaydının olması gerekiyor.");
       return;
     }
 
     if (!selectedBusinessId) {
-      toast({
-        variant: "destructive",
-        title: "Hata",
-        description: "Lütfen bir işletme seçin.",
-      });
+      toast.error("Lütfen bir işletme seçin.");
       return;
     }
 
@@ -379,14 +338,10 @@ const Page = () => {
       // Başarılı import sonrası menüleri yeniden yükle
       await getMenus();
 
-      toast({
-        title: "Menü Aktarımı Başarılı",
-        description: `${result.stats.importedCategories} yeni kategori, ${result.stats.updatedCategories} güncellenen kategori\n${result.stats.importedProducts} yeni ürün, ${result.stats.updatedProducts} güncellenen ürün\n${result.stats.updatedPrices} fiyat güncellendi${result.stats.failedItems.categories.length > 0 || result.stats.failedItems.products.length > 0
-          ? "\n\nBazı öğeler aktarılamadı."
-          : ""
-          }`,
-        variant: "default"
-      });
+      toast.success(`${result.stats.importedCategories} yeni kategori, ${result.stats.updatedCategories} güncellenen kategori\n${result.stats.importedProducts} yeni ürün, ${result.stats.updatedProducts} güncellenen ürün\n${result.stats.updatedPrices} fiyat güncellendi${result.stats.failedItems.categories.length > 0 || result.stats.failedItems.products.length > 0
+        ? "\n\nBazı öğeler aktarılamadı."
+        : ""
+        }`);
 
     } catch (error) {
       console.error('Import hatası:', error);
@@ -411,11 +366,7 @@ const Page = () => {
         }
       }
 
-      toast({
-        title: "Menü Aktarım Hatası",
-        description: errorMessage,
-        variant: "destructive"
-      });
+      toast.error(errorMessage);
     } finally {
       setImporting(false);
       setImportProgress(null);
@@ -453,18 +404,10 @@ const Page = () => {
         paused: false
       });
 
-      toast({
-        title: "İçe Aktarma İptal Edildi",
-        description: "İşlem başarıyla iptal edildi.",
-        variant: "default"
-      });
+      toast.success("İşlem başarıyla iptal edildi.");
     } catch (error) {
       console.error("İptal işlemi sırasında hata:", error);
-      toast({
-        title: "Hata",
-        description: "İptal işlemi sırasında bir hata oluştu.",
-        variant: "destructive"
-      });
+      toast.error("İptal işlemi sırasında bir hata oluştu.");
     }
   };
 
@@ -497,17 +440,10 @@ const Page = () => {
           : menu
       ));
 
-      toast({
-        title: "Başarılı",
-        description: `Menü başarıyla ${targetBusiness?.name} işletmesine taşındı.`,
-      });
+      toast.success(`Menü başarıyla ${targetBusiness?.name} işletmesine taşındı.`);
       setMoveMenuId(null);
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Hata",
-        description: "Menü taşınırken bir hata oluştu.",
-      });
+      toast.error("Menü taşınırken bir hata oluştu.");
     }
   };
 

@@ -2,10 +2,9 @@ import React, { useActionState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { toast, useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils";
 import { login } from "@/app/(auth)/login/actions";
-
+import toast from "react-hot-toast";
 
 export const LoginForm = () => {
   const [state, formAction] = useActionState(login, {
@@ -18,14 +17,11 @@ export const LoginForm = () => {
   useEffect(() => {
     if (!state.success) {
       if (state.errors?.SUPABASE_ERROR) {
-        toast({
-          title: "Giriş Yapılırken Bir Hata Oluştu",
-          description: state.errors.SUPABASE_ERROR[0],
-        });
+        toast.error("Giriş Yapılırken Bir Hata Oluştu");
       }
     }
-  }, [state]);
-  
+  }, [state, toast]);
+
   return (
     <form action={formAction} className="space-y-4">
       <div className="space-y-2">

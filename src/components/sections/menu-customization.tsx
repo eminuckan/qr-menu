@@ -15,7 +15,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { menuSettingsSchema } from "@/lib/validations/menu-settings";
 import { MenuSettingsService } from "@/lib/services/menu-settings-service";
-import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import IPhoneMockup from "../ui/iphone-mockup";
 import { FontSelect, defaultFont, getFontClassName } from "@/components/ui/font-select";
@@ -25,6 +24,7 @@ import { useLottie } from "lottie-react";
 import { Loading } from "@/components/ui/loading";
 import { Database } from "@/lib/types/supabase";
 import { z } from "zod";
+import toast from "react-hot-toast";
 
 type Tables = Database['public']['Tables']
 type MenuSettingsFormValues = z.infer<typeof menuSettingsSchema>;
@@ -206,7 +206,6 @@ interface MenuCustomizationProps {
 }
 
 export const MenuCustomization = ({ businessId }: MenuCustomizationProps) => {
-    const { toast } = useToast();
     const router = useRouter();
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [selectedLogo, setSelectedLogo] = useState<File | null>(null);
@@ -236,11 +235,7 @@ export const MenuCustomization = ({ businessId }: MenuCustomizationProps) => {
                     loader_url: settings.loader_url || "",
                 };
             } catch (error) {
-                toast({
-                    title: "Hata",
-                    description: "Menu ayarları yüklenirken bir hata oluştu",
-                    variant: "destructive",
-                });
+                toast.error("Menu ayarları yüklenirken bir hata oluştu");
                 return {
                     business_id: businessId,
                     welcome_title: "",

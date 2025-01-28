@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
+import toast from "react-hot-toast";
 import { HexColorPicker } from "react-colorful";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import jsPDF from 'jspdf';
@@ -98,7 +98,6 @@ export const QRCustomization = ({ editingQR, selectedBusiness, onCancel, onSave 
     const [logoFile, setLogoFile] = useState<File | null>(null);
     const [logoPreviewUrl, setLogoPreviewUrl] = useState<string>("");
     const [isUploading, setIsUploading] = useState(false);
-    const { toast } = useToast();
 
     const form = useForm<QRCodeFormValues>({
         defaultValues: {
@@ -181,21 +180,13 @@ export const QRCustomization = ({ editingQR, selectedBusiness, onCancel, onSave 
         if (file) {
             // Dosya tipi kontrolü
             if (!['image/jpeg', 'image/jpg', 'image/png', 'image/svg+xml'].includes(file.type)) {
-                toast({
-                    title: "Hata",
-                    description: "Sadece SVG, PNG, JPG veya JPEG formatında dosyalar yüklenebilir.",
-                    variant: "destructive"
-                });
+                toast.error('Sadece SVG, PNG, JPG veya JPEG formatında dosyalar yüklenebilir');
                 return;
             }
 
             // Dosya boyutu kontrolü (2MB)
             if (file.size > 2 * 1024 * 1024) {
-                toast({
-                    title: "Hata",
-                    description: "Dosya boyutu 2MB'dan küçük olmalıdır.",
-                    variant: "destructive"
-                });
+                toast.error('Dosya boyutu 2MB\'dan küçük olmalıdır');
                 return;
             }
 
@@ -206,11 +197,7 @@ export const QRCustomization = ({ editingQR, selectedBusiness, onCancel, onSave 
                 img.onload = () => {
                     // Minimum boyut kontrolü (100x100px)
                     if (img.width < 100 || img.height < 100) {
-                        toast({
-                            title: "Hata",
-                            description: "Logo en az 100x100 piksel boyutunda olmalıdır.",
-                            variant: "destructive"
-                        });
+                        toast.error('Logo en az 100x100 piksel boyutunda olmalıdır');
                         return;
                     }
 
@@ -220,11 +207,7 @@ export const QRCustomization = ({ editingQR, selectedBusiness, onCancel, onSave 
                 };
 
                 img.onerror = () => {
-                    toast({
-                        title: "Hata",
-                        description: "Geçersiz görüntü dosyası.",
-                        variant: "destructive"
-                    });
+                    toast.error('Geçersiz görüntü dosyası');
                 };
 
                 img.src = e.target?.result as string;
@@ -242,11 +225,7 @@ export const QRCustomization = ({ editingQR, selectedBusiness, onCancel, onSave 
 
     const onSubmit = async (values: QRCodeFormValues) => {
         if (!selectedBusiness) {
-            toast({
-                title: "Hata",
-                description: "Lütfen bir işletme seçin",
-                variant: "destructive"
-            });
+            toast.error('Lütfen bir işletme seçin');
             return;
         }
 
@@ -265,20 +244,13 @@ export const QRCustomization = ({ editingQR, selectedBusiness, onCancel, onSave 
 
             await QRService.createQRCode(values, svgString, selectedBusiness, pdfBlob, logoFile || undefined);
 
-            toast({
-                title: "Başarılı",
-                description: "QR kod başarıyla kaydedildi",
-            });
+            toast.success('QR kod başarıyla kaydedildi');
 
             // Başarılı kayıttan sonra onSave callback'ini çağır
             onSave?.();
         } catch (error) {
             console.error(error);
-            toast({
-                title: "Hata",
-                description: error instanceof Error ? error.message : "QR kod kaydedilirken bir hata oluştu",
-                variant: "destructive"
-            });
+            toast.error(error instanceof Error ? error.message : 'QR kod kaydedilirken bir hata oluştu');
         } finally {
             setIsLoading(false);
         }

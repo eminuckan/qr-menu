@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Toaster } from "@/components/ui/toaster";
+import { Toaster } from "react-hot-toast";
 import NextTopLoader from "nextjs-toploader";
 import { Inter, Poppins, Roboto, Montserrat, Raleway } from 'next/font/google';
 
@@ -45,7 +45,42 @@ export default function RootLayout({
             `}>
         <NextTopLoader height={5} />
         {children}
-        <Toaster />
+        <Toaster
+          position="top-center"
+          toastOptions={{
+            duration: 4000,
+            style: {
+              background: '#fff',
+              color: '#333',
+              padding: '16px',
+              borderRadius: '8px',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+              fontSize: '14px',
+              maxWidth: '400px',
+              border: '1px solid #e2e8f0',
+            },
+            success: {
+              style: {
+                backgroundColor: '#f8fafc',
+                border: '1px solid #22c55e',
+              },
+              iconTheme: {
+                primary: '#22c55e',
+                secondary: '#ffffff',
+              },
+            },
+            error: {
+              style: {
+                backgroundColor: '#f8fafc',
+                border: '1px solid #ef4444',
+              },
+              iconTheme: {
+                primary: '#ef4444',
+                secondary: '#ffffff',
+              },
+            },
+          }}
+        />
       </body>
     </html>
   );
