@@ -6,23 +6,19 @@ type Tables = Database['public']['Tables']
 // Adisyo API Tipleri
 interface AdisyoProduct {
     productName: string;
-    productCode: string | null;
     productUnits: {
         unitName: string;
         prices: {
             price: number;
             orderType: number;
         }[];
-        productUnitId: number;
         isDefault: boolean;
     }[];
-    productId: number;
     taxRate: number;
 }
 
 interface AdisyoCategory {
     categoryName: string;
-    categoryId: number;
     products: AdisyoProduct[];
 }
 
@@ -60,8 +56,7 @@ export interface ImportContext {
     paused: boolean;
 }
 
-const RATE_LIMIT_DURATION = 180;
-
+const RATE_LIMIT_DURATION = 180; // 3 dakika
 
 const API_KEY = process.env.NEXT_PUBLIC_ADISYO_API_KEY;
 const API_SECRET = process.env.NEXT_PUBLIC_ADISYO_API_SECRET;
@@ -130,24 +125,34 @@ export class ImportService {
         const defaultUnit = adisyoProduct.productUnits.find(u => u.isDefault);
         if (defaultUnit) {
             const unitId = await this.findOrCreateUnit(defaultUnit.unitName);
-            const price = defaultUnit.prices.find(p => p.orderType === 1)?.price || 0;
+            const defaultPrice = defaultUnit.prices.find(p => p.orderType === 1);
+            const price = defaultPrice?.price || 0;
 
-            const { data: existingPrice } = await this.supabase
+            // Mevcut fiyatı getir
+            const { data: existingPrices, error: priceError } = await this.supabase
                 .from('product_prices')
-                .select()
-                .eq('product_id', existingProduct.id)
-                .eq('unit_id', unitId)
-                .single();
+                .select('*')
+                .eq('product_id', existingProduct.id);
 
-            if (existingPrice && existingPrice.price !== price) {
-                const { error } = await this.supabase
-                    .from('product_prices')
-                    .update({ price })
-                    .eq('id', existingPrice.id);
+            if (priceError) throw priceError;
 
-                if (error) throw error;
-                priceUpdated = true;
-            } else if (!existingPrice) {
+            // Aynı birime ait fiyat var mı kontrol et
+            const existingPrice = existingPrices?.find(p => p.unit_id === unitId);
+
+            if (existingPrice) {
+                // Fiyat değişmişse güncelle
+                if (existingPrice.price !== price) {
+                    console.log(`Fiyat güncelleniyor: ${existingPrice.price} -> ${price}`);
+                    const { error } = await this.supabase
+                        .from('product_prices')
+                        .update({ price })
+                        .eq('id', existingPrice.id);
+
+                    if (error) throw error;
+                    priceUpdated = true;
+                }
+            } else {
+                // Yeni fiyat ekle
                 const { error } = await this.supabase
                     .from('product_prices')
                     .insert({
@@ -194,6 +199,11 @@ export class ImportService {
             });
 
             if (!response.ok) {
+                // Rate limit kontrolü
+                console.log(response);
+                if (response.status === 601) {
+                    throw new Error(`rate_limit:${RATE_LIMIT_DURATION}`);
+                }
                 throw new Error(`API Hatası: ${response.status} ${response.statusText}`);
             }
 
@@ -209,25 +219,63 @@ export class ImportService {
             // Menüyü bul veya oluştur
             let menuId = context.menuId;
             if (!menuId) {
-                const { data: menu, error: menuError } = await this.supabase
-                    .from('menus')
-                    .insert({
-                        name: 'Adisyo Menü',
-                        is_active: true,
-                        business_id: businessId,
-                        color: '#ffffff'
-                    })
-                    .select()
-                    .single();
+                console.log('Mevcut menü ID yok, Adisyo menüsü aranıyor...');
 
-                if (menuError) throw menuError;
-                menuId = menu.id;
-                context.menuId = menuId;
+                // Önce mevcut Adisyo menüsünü ara
+                const { data: existingMenus, error: menuSearchError } = await this.supabase
+                    .from('menus')
+                    .select()
+                    .eq('business_id', businessId);
+
+                if (menuSearchError) {
+                    console.error('Menü arama hatası:', menuSearchError);
+                    throw menuSearchError;
+                }
+
+                console.log('Bulunan menüler:', existingMenus);
+
+                // Adisyo Menü ismini normalize et ve karşılaştır
+                const adisyoMenu = existingMenus?.find(menu =>
+                    menu.name.toLowerCase().trim() === 'adisyo menü'
+                );
+
+                if (adisyoMenu) {
+                    console.log('Mevcut Adisyo menüsü bulundu:', adisyoMenu);
+                    menuId = adisyoMenu.id;
+                    context.menuId = menuId;
+                } else {
+                    console.log('Mevcut Adisyo menüsü bulunamadı, yeni oluşturuluyor...');
+                    const { data: menu, error: menuError } = await this.supabase
+                        .from('menus')
+                        .insert({
+                            name: 'Adisyo Menü',
+                            is_active: true,
+                            business_id: businessId,
+                            color: '#ffffff'
+                        })
+                        .select()
+                        .single();
+
+                    if (menuError) {
+                        console.error('Menü oluşturma hatası:', menuError);
+                        throw menuError;
+                    }
+
+                    console.log('Yeni menü oluşturuldu:', menu);
+                    menuId = menu.id;
+                    context.menuId = menuId;
+                }
+            } else {
+                console.log('Mevcut menü ID kullanılıyor:', menuId);
             }
 
             // Kategorileri ve ürünleri işle
             for (const category of adisyoData.data) {
-                if (context.aborted) break;
+                // Abort kontrolü
+                if (context.aborted) {
+                    console.log('Import işlemi kullanıcı tarafından iptal edildi');
+                    break;
+                }
 
                 try {
                     onProgress?.({
@@ -269,6 +317,7 @@ export class ImportService {
 
                     // Ürünleri işle
                     for (const product of category.products) {
+                        // Abort kontrolü
                         if (context.aborted) break;
 
                         try {
@@ -353,7 +402,7 @@ export class ImportService {
             };
 
         } catch (error) {
-            if (error instanceof Error && error.message.includes('rate limit')) {
+            if (error instanceof Error && error.message.startsWith('rate_limit:')) {
                 throw new Error(`API rate limit aşıldı. Lütfen ${RATE_LIMIT_DURATION} saniye bekleyin.`);
             }
             throw error;

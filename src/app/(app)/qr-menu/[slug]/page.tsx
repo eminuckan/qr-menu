@@ -6,6 +6,7 @@ import { MenuWelcome } from "@/components/sections/menu-welcome";
 import { MenuContent } from "@/components/sections/menu-content";
 import { MenuProvider } from "@/contexts/menu-context";
 import { Database } from "@/lib/types/supabase";
+import { Menu } from "@/lib/types/menu";
 
 type Tables = Database['public']['Tables']
 
@@ -24,13 +25,17 @@ export default async function QRMenuPage({ params }: QRMenuPageProps) {
     }
 
     const menuSettings = await MenuSettingsService.getMenuSettings(business.id);
-    const menus = await MenuService.getMenusByBusinessId(business.id);
+    const [activeMenu] = await MenuService.getMenuWithFullDetails(business.id);
+
+    if (!activeMenu) {
+        notFound();
+    }
 
     return (
         <MenuProvider>
             <main className="min-h-screen">
-                <MenuWelcome settings={menuSettings} menus={menus} />
-                <MenuContent menus={menus} businessName={business.name} />
+                <MenuWelcome settings={menuSettings} menu={activeMenu} />
+                <MenuContent menu={activeMenu} businessName={business.name} />
             </main>
         </MenuProvider>
     );

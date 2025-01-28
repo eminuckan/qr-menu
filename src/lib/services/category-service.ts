@@ -51,8 +51,6 @@ export class CategoryService {
                 .eq('id', id)
                 .single();
 
-            console.log(category);
-
             if (categoryError) {
                 console.error('Kategori getirme hatası:', categoryError);
                 throw categoryError;

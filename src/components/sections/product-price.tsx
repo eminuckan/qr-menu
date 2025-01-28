@@ -3,8 +3,6 @@ import { ProductWithRelations } from "@/lib/services/product-service";
 export const ProductPrice = ({ product }: { product: ProductWithRelations }) => {
   const mainPrice = product.product_prices?.[0];
 
-  console.log('mainPrice:', mainPrice);
-
   if (!mainPrice) return <div>-</div>;
 
   return (

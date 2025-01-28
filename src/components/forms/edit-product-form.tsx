@@ -54,8 +54,6 @@ export function EditProductForm({
     const [productImages, setProductImages] = useState<FormProductImage[]>([]);
     const { toast } = useToast();
 
-    console.log(product);
-
     const defaultValues: ProductFormValues = {
         name: product.name,
         description: product.description ?? "",

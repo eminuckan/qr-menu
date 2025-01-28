@@ -16,7 +16,7 @@ export interface LoginState {
     password: string;
 }
 
-export async function login(_prevState: LoginState,formData: FormData) : Promise<LoginState> {
+export async function login(_prevState: LoginState, formData: FormData): Promise<LoginState> {
     const validatedData = loginSchema.safeParse({
         email: formData.get('email'),
         password: formData.get('password'),
@@ -39,8 +39,6 @@ export async function login(_prevState: LoginState,formData: FormData) : Promise
         email: validatedData.data.email,
         password: validatedData.data.password,
     });
-
-    console.log(error)
 
     if (error) {
         return {

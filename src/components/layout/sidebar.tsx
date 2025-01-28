@@ -55,14 +55,13 @@ const Logo = () => (
   </svg>
 );
 
-export const Sidebar =  () => {
+export const Sidebar = () => {
   const pathname = usePathname();
   const supabase = createClient();
   const [user, setUser] = useState<any>(null);
 
   const getUser = useCallback(async () => {
-    const {data: user} = await supabase.auth.getUser();
-    console.log(user);
+    const { data: user } = await supabase.auth.getUser();
     setUser(user);
   }, [supabase]);
 

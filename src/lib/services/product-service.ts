@@ -18,12 +18,27 @@ const productQuery = createClient()
   `);
 
 export type ProductWithRelations = Tables<'products'> & {
-  product_allergens: Tables<'product_allergens'>[];
-  product_tags: Tables<'product_tags'>[];
-  product_prices: (Tables<'product_prices'> & {
-    unit: Tables<'units'>;
-  })[];
-  product_images: Tables<'product_images'>[];
+  product_allergens: {
+    id: string;
+    allergen: Enums<'allergen_type'>;
+  }[];
+  product_tags: {
+    id: string;
+    tag_type: Enums<'product_tag_type'>;
+  }[];
+  product_prices: {
+    id: string;
+    price: number;
+    unit: {
+      id: string;
+      name: string;
+    };
+  }[];
+  product_images: {
+    id: string;
+    image_url: string;
+    is_cover: boolean;
+  }[];
 };
 
 interface CreateProductData extends InsertTables<'products'> {
@@ -242,32 +257,47 @@ export class ProductService {
   }
 
   static async getProductsByCategory(categoryId: string): Promise<ProductWithRelations[]> {
-    const { data, error } = await this.supabase
-      .from('products')
-      .select(`
-        *,
-        product_allergens!inner (
-          allergen,
-          created_at,
-          id,
-          product_id
-        ),
-        product_tags!inner (
-          id,
-          product_id,
-          tag_type
-        ),
-        product_prices!inner (
+    try {
+      const { data, error } = await this.supabase
+        .from('products')
+        .select(`
           *,
-          unit:units!inner (*)
-        ),
-        product_images!inner (*)
-      `)
-      .eq('category_id', categoryId)
-      .order('sort_order', { ascending: true });
+          product_allergens!product_allergens_product_id_fkey (
+            id,
+            allergen
+          ),
+          product_tags!fk_product_tags_product (
+            id,
+            tag_type
+          ),
+          product_prices!fk_product_prices_product (
+            id,
+            price,
+            unit:units!fk_product_prices_unit (
+              id,
+              name
+            )
+          ),
+          product_images!fk_product_images_product (
+            id,
+            image_url,
+            is_cover
+          )
+        `)
+        .eq('category_id', categoryId)
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true });
 
-    if (error) throw error;
-    return (data || []) as unknown as ProductWithRelations[];
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+
+      return data as unknown as ProductWithRelations[];
+    } catch (error) {
+      console.error('getProductsByCategory error:', error);
+      throw error;
+    }
   }
 
   static async deleteProductImage(imageId: string, imageUrl: string): Promise<void> {

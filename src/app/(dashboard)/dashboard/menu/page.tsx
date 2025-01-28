@@ -395,15 +395,19 @@ const Page = () => {
       if (error instanceof Error) {
         errorMessage = error.message;
 
+        // Rate limit kontrolü
         if (error.message.includes('rate limit')) {
           setIsRateLimited(true);
-          const duration = 180;
+          const duration = 180; // 3 dakika
           setRateLimitCountdown(duration);
 
+          // Rate limit bilgisini localStorage'a kaydet
           localStorage.setItem('importRateLimit', JSON.stringify({
             timestamp: Date.now(),
             duration: duration
           }));
+
+          console.log('Rate limit başlatıldı:', duration, 'saniye');
         }
       }
 
@@ -507,29 +511,38 @@ const Page = () => {
     }
   };
 
+  // Rate limit kontrolü
   useEffect(() => {
     const checkRateLimit = () => {
-      const storedData = localStorage.getItem('importRateLimit');
-      if (storedData) {
-        const { timestamp, duration } = JSON.parse(storedData);
+      const storedLimit = localStorage.getItem('importRateLimit');
+      if (storedLimit) {
+        const { timestamp, duration } = JSON.parse(storedLimit);
         const now = Date.now();
-        const elapsedTime = Math.floor((now - timestamp) / 1000);
-        const remainingTime = duration - elapsedTime;
+        const elapsedSeconds = Math.floor((now - timestamp) / 1000);
+        const remainingSeconds = duration - elapsedSeconds;
 
-        if (remainingTime > 0) {
+        if (remainingSeconds > 0) {
           setIsRateLimited(true);
-          setRateLimitCountdown(remainingTime);
+          setRateLimitCountdown(remainingSeconds);
+          console.log('Rate limit aktif:', remainingSeconds, 'saniye kaldı');
         } else {
           localStorage.removeItem('importRateLimit');
           setIsRateLimited(false);
           setRateLimitCountdown(0);
+          console.log('Rate limit süresi doldu');
         }
       }
     };
 
+    // Sayfa yüklendiğinde kontrol et
     checkRateLimit();
+
+    // Her saniye kontrol et
+    const interval = setInterval(checkRateLimit, 1000);
+    return () => clearInterval(interval);
   }, []);
 
+  // Rate limit sayacı
   useEffect(() => {
     if (rateLimitCountdown > 0) {
       const timer = setInterval(() => {

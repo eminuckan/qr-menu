@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import { Database } from "@/lib/types/supabase";
+import { Menu } from "@/lib/types/menu";
 
 type Tables = Database['public']['Tables']
 
@@ -104,5 +105,50 @@ export class MenuService {
 
         if (error) throw error;
         return data;
+    }
+
+    static async getMenuWithFullDetails(businessId: string): Promise<Menu[]> {
+        const { data, error } = await this.supabase
+            .from('menus')
+            .select(`
+                *,
+                categories!menu_id (
+                    *,
+                    products!category_id (
+                        *,
+                        product_allergens!product_allergens_product_id_fkey (
+                            id,
+                            allergen
+                        ),
+                        product_tags!product_tags_product_id_fkey (
+                            id,
+                            tag_type
+                        ),
+                        product_prices!product_prices_product_id_fkey (
+                            id,
+                            price,
+                            unit:units!product_prices_unit_id_fkey (
+                                id,
+                                name
+                            )
+                        ),
+                        product_images!product_images_product_id_fkey (
+                            id,
+                            image_url,
+                            is_cover
+                        )
+                    )
+                )
+            `)
+            .eq('business_id', businessId)
+            .eq('is_active', true)
+            .order('sort_order', { ascending: true });
+
+        if (error) {
+            console.error('Menü detayları alınırken hata:', error);
+            throw error;
+        }
+
+        return data as unknown as Menu[];
     }
 } 

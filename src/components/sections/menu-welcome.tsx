@@ -1,6 +1,7 @@
 "use client";
 
 import { Database } from "@/lib/types/supabase";
+import { Menu } from "@/lib/types/menu";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
@@ -12,10 +13,10 @@ type Tables = Database["public"]["Tables"];
 
 interface MenuWelcomeProps {
     settings: Tables["menu_settings"]["Row"];
-    menus: Tables["menus"]["Row"][];
+    menu: Menu;
 }
 
-export function MenuWelcome({ settings, menus }: MenuWelcomeProps) {
+export function MenuWelcome({ settings, menu }: MenuWelcomeProps) {
     const router = useRouter();
     const { setDrawerOpen } = useMenu();
     const [showLoader, setShowLoader] = useState(true);
