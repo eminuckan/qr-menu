@@ -1,0 +1,20 @@
+/* Modern Minimal */
+.theme-minimal {
+    --landing-primary: 220 40% 50%;
+    --landing-primary-foreground: 0 0% 100%;
+    --landing-secondary: 220 20% 95%;
+    --landing-secondary-foreground: 220 40% 50%;
+    --landing-accent: 250 40% 60%;
+    --landing-background: 0 0% 100%;
+    --landing-text: 220 20% 20%;
+}
+
+:root {
+    --landing-primary: 220 40% 50%;
+    --landing-primary-foreground: 0 0% 100%;
+    --landing-secondary: 220 20% 95%;
+    --landing-secondary-foreground: 220 40% 50%;
+    --landing-accent: 250 40% 60%;
+    --landing-background: 0 0% 100%;
+    --landing-text: 220 20% 20%;
+}

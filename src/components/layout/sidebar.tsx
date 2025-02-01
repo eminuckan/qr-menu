@@ -78,21 +78,21 @@ export const Sidebar = () => {
 
       {/* Menü */}
       <div className="flex-1 px-3 space-y-1 mt-16">
-        {/* mt-8 -> mt-12 */}
         {menuItems.map((item) => (
-          <Link
+          <Button
             key={item.href}
-            href={item.href}
-            className={cn(
-              "flex items-center justify-center lg:justify-start h-12 lg:px-3 p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-md group transition-all duration-300",
-              pathname === item.href && "text-white bg-zinc-800"
-            )}
+            variant={pathname === item.href ? "menuActive" : "menu"}
+            className="w-full justify-start"
+            asChild
           >
-            <item.icon className="h-5 w-5" />
-            <span className="ml-3 hidden lg:inline-block text-base">
-              {item.title}
-            </span>
-          </Link>
+            <Link href={item.href}>
+
+              <item.icon className="h-5 w-5" />
+              <span className="ml-3 hidden lg:inline-block text-base">
+                {item.title}
+              </span>
+            </Link>
+          </Button>
         ))}
       </div>
 

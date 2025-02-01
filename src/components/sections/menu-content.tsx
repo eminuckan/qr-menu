@@ -16,6 +16,33 @@ interface MenuContentProps {
     businessName: string;
 }
 
+// Etiket ve alerjen çevirileri için sabit tanımlamalar
+const TAG_TRANSLATIONS: Record<Database['public']['Enums']['product_tag_type'], string> = {
+    new: 'Yeni',
+    signature: 'İmza',
+    chef_recommendation: 'Şef Önerisi',
+    popular: 'Popüler',
+    vegan: 'Vegan',
+    special: 'Özel'
+};
+
+const ALLERGEN_TRANSLATIONS: Record<Database['public']['Enums']['allergen_type'], string> = {
+    gluten: 'Gluten',
+    shellfish: 'Kabuklu Deniz Ürünleri',
+    fish: 'Balık',
+    eggs: 'Yumurta',
+    dairy: 'Süt Ürünleri',
+    nuts: 'Kuruyemiş',
+    peanuts: 'Yer Fıstığı',
+    wheat: 'Buğday',
+    sulfur_dioxide: 'Sülfür Dioksit',
+    mustard: 'Hardal',
+    sesame: 'Susam',
+    soy: 'Soya',
+    lupin: 'Acı Bakla',
+    celery: 'Kereviz'
+};
+
 export function MenuContent({ menu, businessName }: MenuContentProps) {
     const { isDrawerOpen, setDrawerOpen } = useMenu();
     const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
@@ -122,7 +149,7 @@ export function MenuContent({ menu, businessName }: MenuContentProps) {
                                     className="flex gap-4 p-4 bg-card rounded-lg shadow-sm border cursor-pointer hover:border-primary transition-colors"
                                     onClick={() => handleProductClick(product)}
                                 >
-                                    <div className="w-24 h-24 rounded-lg overflow-hidden flex-shrink-0">
+                                    <div className="w-36 h-36 rounded-lg overflow-hidden flex-shrink-0">
                                         {product.product_images?.find(img => img.is_cover)?.image_url ? (
                                             <img
                                                 src={(product.product_images.find(img => img.is_cover)?.image_url ?? "/no-image.jpg") as string}
@@ -145,7 +172,7 @@ export function MenuContent({ menu, businessName }: MenuContentProps) {
                                                             key={tag.id}
                                                             className="px-1.5 py-0.5 bg-primary/10 text-primary rounded-md text-xs font-medium"
                                                         >
-                                                            {tag.tag_type}
+                                                            {TAG_TRANSLATIONS[tag.tag_type]}
                                                         </span>
                                                     ))}
                                                 </div>
@@ -205,13 +232,13 @@ export function MenuContent({ menu, businessName }: MenuContentProps) {
                                             key={tag.id}
                                             className="px-2 py-1 bg-white/90 backdrop-blur text-primary rounded-lg text-xs font-medium shadow-sm"
                                         >
-                                            {tag.tag_type}
+                                            {TAG_TRANSLATIONS[tag.tag_type]}
                                         </span>
                                     ))}
                                 </div>
                             )}
 
-                            <div className="w-full h-48 mb-6 rounded-lg overflow-hidden">
+                            <div className="w-full h-64 mb-6 rounded-lg overflow-hidden">
                                 {selectedProduct?.product_images?.find(img => img.is_cover)?.image_url ? (
                                     <img
                                         src={(selectedProduct.product_images.find(img => img.is_cover)?.image_url ?? "/no-image.jpg") as string}
@@ -258,7 +285,7 @@ export function MenuContent({ menu, businessName }: MenuContentProps) {
                                             key={allergen.id}
                                             className="px-3 py-1.5 bg-muted rounded-lg text-sm"
                                         >
-                                            {allergen.allergen}
+                                            {ALLERGEN_TRANSLATIONS[allergen.allergen]}
                                         </span>
                                     ))}
                                 </div>
