@@ -51,7 +51,7 @@
     "jspdf": "^2.5.2",
     "lottie-react": "^2.4.1",
     "lucide-react": "^0.473.0",
-    "next": "15.1.5",
+    "next": "15.1.9",
     "next-auth": "^5.0.0-beta.25",
     "nextjs-toploader": "^3.7.15",
     "pdf-lib": "^1.17.1",
