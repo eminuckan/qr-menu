@@ -674,11 +674,10 @@ export class AdisyoSyncService {
     const categoryName = normalizeName(args.category.categoryName)
     const id = externalId(args.category.categoryId, categoryName)
     const mapping = await this.getMapping(args.businessId, "category", id)
-    const nextValues = {
+    const syncValues = {
       menu_id: args.menuId,
       name: categoryName,
       is_active: true,
-      sort_order: args.sortOrder,
       color: "#ffffff",
     }
 
@@ -694,10 +693,10 @@ export class AdisyoSyncService {
       }
 
       if (current) {
-        if (changed(current, nextValues)) {
+        if (changed(current, syncValues)) {
           const { error: updateError } = await this.supabase
             .from("categories")
-            .update(nextValues)
+            .update(syncValues)
             .eq("id", current.id)
 
           if (updateError) {
@@ -732,7 +731,7 @@ export class AdisyoSyncService {
       .maybeSingle()
 
     if (adopted) {
-      await this.supabase.from("categories").update(nextValues).eq("id", adopted.id)
+      await this.supabase.from("categories").update(syncValues).eq("id", adopted.id)
       await this.upsertMapping({
         businessId: args.businessId,
         entityType: "category",
@@ -744,6 +743,11 @@ export class AdisyoSyncService {
       })
       args.stats.updatedCategories++
       return adopted.id
+    }
+
+    const nextValues = {
+      ...syncValues,
+      sort_order: await this.getNextCategorySortOrder(args.menuId),
     }
 
     const { data: created, error: createError } = await this.supabase
@@ -768,6 +772,23 @@ export class AdisyoSyncService {
     args.stats.importedCategories++
 
     return created.id
+  }
+
+  private async getNextCategorySortOrder(menuId: string) {
+    const { data, error } = await this.supabase
+      .from("categories")
+      .select("sort_order")
+      .eq("menu_id", menuId)
+
+    if (error) {
+      throw error
+    }
+
+    const maxSortOrder = (data ?? []).reduce((max, category) => {
+      return Math.max(max, category.sort_order ?? 0)
+    }, 0)
+
+    return maxSortOrder + 1
   }
 
   private async upsertProduct(args: {
