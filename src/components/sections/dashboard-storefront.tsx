@@ -76,7 +76,7 @@ export function DashboardStorefront({
 
   return (
     <section
-      className="grid overflow-hidden rounded-xl border border-border bg-card lg:grid-cols-[minmax(260px,320px)_minmax(0,1fr)]"
+      className="grid grid-cols-1 overflow-hidden rounded-xl border border-border bg-card lg:grid-cols-[minmax(260px,320px)_minmax(0,1fr)]"
       aria-label="Yayın durumu"
     >
       <div
@@ -120,7 +120,7 @@ export function DashboardStorefront({
         </div>
       </div>
 
-      <div className="flex flex-col gap-5 p-5 lg:p-6">
+      <div className="flex min-w-0 flex-col gap-5 p-5 lg:p-6">
         <div>
           <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Yayın adresi
@@ -137,12 +137,12 @@ export function DashboardStorefront({
           )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 font-mono text-xs text-muted-foreground">
-          <span className="truncate">{publicUrl || path}</span>
+        <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 font-mono text-xs text-muted-foreground">
+          <span className="min-w-0 flex-1 truncate">{publicUrl || path}</span>
           <button
             type="button"
             onClick={copyLink}
-            className="ml-auto inline-flex h-7 items-center gap-1 rounded-sm px-2 text-xs font-medium text-foreground transition-colors hover:bg-background"
+            className="shrink-0 inline-flex h-7 items-center gap-1 rounded-sm px-2 text-xs font-medium text-foreground transition-colors hover:bg-background"
           >
             <HugeIcon icon={Copy01Icon} size={12} />
             Kopyala
@@ -172,7 +172,7 @@ export function DashboardStorefront({
         <dl className="grid grid-cols-3 gap-3 text-sm">
           <Metric label="Menü" value={publishStatus.menus} />
           <Metric label="Kategori" value={publishStatus.categories} />
-          <Metric label="Yayındaki ürün" value={publishStatus.products} accent />
+          <Metric label="Ürün" value={publishStatus.products} accent />
         </dl>
 
         <div className="flex items-center justify-between gap-2 rounded-md border border-border bg-background px-3 py-2 text-xs">
