@@ -1,51 +1,101 @@
-"use client";
-
-import React from 'react';
-import { ChevronRight } from "lucide-react";
 import Link from "next/link";
+import {
+  ArrowRight01Icon,
+  Building03Icon,
+  DatabaseSync01Icon,
+  PaintBoardIcon,
+  QrCodeIcon,
+} from "@hugeicons/core-free-icons";
 
-const settingsItems = [
+import { HugeIcon, type HugeIconElement } from "@/components/ui/huge-icon";
+import {
+  PageHeader,
+  SectionHeader,
+} from "@/components/ui/console-primitives";
+
+type SettingsItem = {
+  title: string;
+  description: string;
+  href: string;
+  icon: HugeIconElement;
+  group: "Görünüm" | "Yayın" | "Hesap" | "Entegrasyon";
+};
+
+const settingsItems: SettingsItem[] = [
   {
-    title: "Menü Kişiselleştirme",
-    description: "Logo, yükleme animasyonu, arkaplan ve yazı tipi ayarlarını düzenleyin",
-    href: "/dashboard/settings/menu-settings"
+    title: "Menü görünümü",
+    description: "Logo, yükleme animasyonu, arka plan ve giriş ekranı.",
+    href: "/dashboard/settings/menu-settings",
+    icon: PaintBoardIcon,
+    group: "Görünüm",
   },
   {
-    title: "QR Kodu Kişiselleştirme",
-    description: "QR kodunuzun görünümünü ve içeriğini özelleştirin",
-    href: "/dashboard/settings/qr-settings"
+    title: "QR tasarımı",
+    description: "QR kodu özelleştirme, renkler ve indirilebilir çıktılar.",
+    href: "/dashboard/settings/qr-settings",
+    icon: QrCodeIcon,
+    group: "Yayın",
   },
   {
-    title: "İşletme Ayarları",
-    description: "İşletme bilgilerini düzenleyin",
-    href: "/dashboard/settings/business-settings"
-  }
+    title: "İşletmeler",
+    description: "İşletme kayıtları, slug ve sahiplik bilgileri.",
+    href: "/dashboard/settings/business-settings",
+    icon: Building03Icon,
+    group: "Hesap",
+  },
+  {
+    title: "Adisyo bağlantısı",
+    description: "POS API anahtarlarını yönet ve katalog senkronunu kontrol et.",
+    href: "/dashboard/settings/adisyo-settings",
+    icon: DatabaseSync01Icon,
+    group: "Entegrasyon",
+  },
 ];
 
-const SettingsPage = () => {
-  return (
-    <div className="container py-6">
-      <h1 className="text-2xl font-bold mb-6">Ayarlar</h1>
+export default function SettingsPage() {
+  const grouped = settingsItems.reduce<Record<string, SettingsItem[]>>((acc, item) => {
+    (acc[item.group] = acc[item.group] || []).push(item);
+    return acc;
+  }, {});
 
-      <div className={`grid gap-4 ${settingsItems.length <= 2 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
-        {settingsItems.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={`flex flex-col justify-between p-4 rounded-lg border hover:bg-muted transition-colors ${settingsItems.length === 1 ? 'md:col-span-2' : ''}`}
-          >
-            <div className="space-y-2">
-              <h2 className="text-xl font-semibold">{item.title}</h2>
-              <p className="text-base text-muted-foreground">{item.description}</p>
+  return (
+    <div>
+      <PageHeader
+        title="Ayarlar"
+        description="Yayın deneyimini etkileyen işletme, QR ve menü ayarlarını yönetin."
+      />
+
+      <div className="space-y-8">
+        {Object.entries(grouped).map(([group, items]) => (
+          <section key={group}>
+            <SectionHeader title={group} />
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {items.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="group flex items-start gap-4 rounded-lg border border-border bg-card p-4 transition-all hover:border-foreground/30 hover:bg-muted/40"
+                >
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-muted text-foreground/80 transition-colors group-hover:bg-foreground group-hover:text-background">
+                    <HugeIcon icon={item.icon} size={20} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="text-sm font-semibold">{item.title}</h3>
+                      <HugeIcon
+                        icon={ArrowRight01Icon}
+                        size={16}
+                        className="text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground"
+                      />
+                    </div>
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">{item.description}</p>
+                  </div>
+                </Link>
+              ))}
             </div>
-            <div className="flex justify-end mt-4">
-              <ChevronRight className="h-5 w-5 text-muted-foreground" />
-            </div>
-          </Link>
+          </section>
         ))}
       </div>
     </div>
   );
-};
-
-export default SettingsPage;
+}

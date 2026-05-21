@@ -2,7 +2,8 @@
 import * as React from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { X, Check, ChevronsUpDown } from "lucide-react"
+import { Cancel01Icon, Check, ChevronsUpDown } from "@hugeicons/core-free-icons"
+import { HugeIcon } from "@/components/ui/huge-icon"
 import {
   Popover,
   PopoverContent,
@@ -53,11 +54,11 @@ export function MultiSelect({
                 }}
               >
                 {options.find((opt) => opt.value === value)?.label}
-                <X className="ml-1 h-3 w-3" />
+                <HugeIcon icon={Cancel01Icon} className="ml-1 h-3 w-3" />
               </Badge>
             ))}
           </div>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          <HugeIcon icon={ChevronsUpDown} className="ml-2 h-4 w-4 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-full p-0">
@@ -79,7 +80,7 @@ export function MultiSelect({
             >
               <div className="w-4">
                 {selected.includes(option.value) && (
-                  <Check className="h-4 w-4" />
+                  <HugeIcon icon={Check} className="h-4 w-4" />
                 )}
               </div>
               {option.label}
@@ -89,4 +90,4 @@ export function MultiSelect({
       </PopoverContent>
     </Popover>
   )
-} 
+}

@@ -1,10 +1,7 @@
 const protectedRoutes = [
     '/dashboard',
-    '/dashboard/menu/',
-    '/dashboard/settings',
-    '/dashboard/profile',
-    '/dashboard/areas'
+    '/update-password',
 ]
-const authRoutes = ['/login', '/auth']
+const authRoutes = ['/login', '/register', '/forgot-password']
 
 export { protectedRoutes, authRoutes }

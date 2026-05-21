@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { ProductService } from "@/lib/services/product-service";
-import { Check, Plus, X } from "lucide-react";
+import { Add01Icon, Cancel01Icon, Check } from "@hugeicons/core-free-icons";
 import { Input } from "./input";
 import { Button } from "./button";
+import { HugeIcon } from "./huge-icon";
 import {
     Select,
     SelectContent,
@@ -72,7 +73,7 @@ export function UnitSelect({ units, value, onValueChange, onUnitAdded }: UnitSel
                         className="h-12 w-12"
                         disabled={isLoading}
                     >
-                        <Check className="h-4 w-4" />
+                        <HugeIcon icon={Check} className="h-4 w-4" />
                     </Button>
                     <Button
                         type="button"
@@ -85,7 +86,7 @@ export function UnitSelect({ units, value, onValueChange, onUnitAdded }: UnitSel
                         className="h-12 w-12"
                         disabled={isLoading}
                     >
-                        <X className="h-4 w-4" />
+                        <HugeIcon icon={Cancel01Icon} className="h-4 w-4" />
                     </Button>
                 </div>
             ) : (
@@ -110,10 +111,10 @@ export function UnitSelect({ units, value, onValueChange, onUnitAdded }: UnitSel
                         className="h-12 w-12"
                         disabled={isLoading}
                     >
-                        <Plus className="h-4 w-4" />
+                        <HugeIcon icon={Add01Icon} className="h-4 w-4" />
                     </Button>
                 </>
             )}
         </div>
     );
-} 
+}

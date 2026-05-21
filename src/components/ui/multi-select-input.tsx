@@ -1,9 +1,10 @@
 "use client"
 import * as React from "react"
 import Select, { components, MultiValueProps, GroupBase } from "react-select"
-import { X, Check } from "lucide-react"
+import { Cancel01Icon, Check } from "@hugeicons/core-free-icons"
 import { cn } from "@/lib/utils"
 import { Badge } from "./badge"
+import { HugeIcon } from "./huge-icon"
 
 interface Option {
   value: string
@@ -27,11 +28,12 @@ const MultiValue = ({ children, ...props }: MultiValueProps<Option, true, GroupB
         className="h-7 rounded-md text-sm font-normal px-2 hover:bg-secondary/80 whitespace-nowrap"
       >
         {children}
-        <X
+        <HugeIcon
+          icon={Cancel01Icon}
           className="ml-2 h-4 w-4 cursor-pointer hover:text-destructive"
           onClick={(e) => {
             e.stopPropagation()
-            props.removeProps?.onClick?.(e as any)
+            props.removeProps?.onClick?.(e as unknown as React.MouseEvent<HTMLDivElement>)
           }}
         />
       </Badge>
@@ -86,7 +88,7 @@ export function MultiSelectInput({
         Option: ({ children, ...props }) => (
           <components.Option {...props}>
             <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
-              {props.isSelected && <Check className="h-4 w-4" />}
+              {props.isSelected && <HugeIcon icon={Check} className="h-4 w-4" />}
             </span>
             {children}
           </components.Option>
@@ -114,4 +116,4 @@ export function MultiSelectInput({
       }}
     />
   )
-} 
+}

@@ -2,12 +2,14 @@
 
 import { Database } from "@/lib/types/supabase";
 import { Menu as MenuType, Category } from "@/lib/types/menu";
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
-import { HandPlatter, ArrowLeft } from "lucide-react";
+import { Drawer, DrawerContent, DrawerDescription, DrawerTitle } from "@/components/ui/drawer";
+import { ArrowLeft01Icon, SpoonAndForkIcon } from "@hugeicons/core-free-icons";
+import { HugeIcon } from "@/components/ui/huge-icon";
 import { useMenu } from "@/contexts/menu-context";
 import { useState, useMemo } from "react";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { ProductService, ProductWithRelations } from "@/lib/services/product-service";
+import { formatDisplayName } from "@/lib/utils";
 
 type Tables = Database['public']['Tables']
 
@@ -76,6 +78,7 @@ export function MenuContent({ menu, businessName }: MenuContentProps) {
                 <DrawerContent className="h-[85vh] mt-[5vh]">
                     <VisuallyHidden>
                         <DrawerTitle>Menü İçeriği</DrawerTitle>
+                        <DrawerDescription>{businessName} menü kategorileri</DrawerDescription>
                     </VisuallyHidden>
 
                     <div className="overflow-auto h-full p-3">
@@ -96,11 +99,11 @@ export function MenuContent({ menu, businessName }: MenuContentProps) {
                                                 className="w-full h-full object-cover"
                                             />
                                         ) : (
-                                            <HandPlatter className="w-8 h-8 text-white" />
+                                            <HugeIcon icon={SpoonAndForkIcon} className="w-8 h-8 text-white" />
                                         )}
                                     </div>
                                     <span className="mt-2 text-sm font-semibold text-center">
-                                        {category.name}
+                                        {formatDisplayName(category.name)}
                                     </span>
                                 </div>
                             ))}
@@ -114,6 +117,7 @@ export function MenuContent({ menu, businessName }: MenuContentProps) {
                 <DrawerContent className="h-[85vh] mt-[5vh]">
                     <VisuallyHidden>
                         <DrawerTitle>Kategori Ürünleri</DrawerTitle>
+                        <DrawerDescription>Seçili kategorideki ürün listesi</DrawerDescription>
                     </VisuallyHidden>
 
                     <div className="flex items-center justify-between p-4 border-b">
@@ -121,10 +125,10 @@ export function MenuContent({ menu, businessName }: MenuContentProps) {
                             onClick={() => setSelectedCategory(null)}
                             className="flex items-center gap-2 px-3 py-2 text-sm font-medium bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-colors"
                         >
-                            <ArrowLeft className="w-4 h-4" />
+                            <HugeIcon icon={ArrowLeft01Icon} className="w-4 h-4" />
                             Geri
                         </button>
-                        <h2 className="text-lg font-semibold">{selectedCategory?.name}</h2>
+                        <h2 className="text-lg font-semibold">{formatDisplayName(selectedCategory?.name)}</h2>
                         <div className="w-[76px]"></div>
                     </div>
 
@@ -158,13 +162,13 @@ export function MenuContent({ menu, businessName }: MenuContentProps) {
                                             />
                                         ) : (
                                             <div className="w-full h-full bg-[#3b8044] flex items-center justify-center">
-                                                <HandPlatter className="w-8 h-8 text-white" />
+                                                <HugeIcon icon={SpoonAndForkIcon} className="w-8 h-8 text-white" />
                                             </div>
                                         )}
                                     </div>
                                     <div className="flex-1">
                                         <div className="flex items-start justify-between gap-2 mb-2">
-                                            <h3 className="font-medium">{product.name}</h3>
+                                            <h3 className="font-medium">{formatDisplayName(product.name)}</h3>
                                             {product.product_tags && product.product_tags.length > 0 && (
                                                 <div className="flex flex-wrap gap-1 justify-end">
                                                     {product.product_tags.map(tag => (
@@ -209,6 +213,7 @@ export function MenuContent({ menu, businessName }: MenuContentProps) {
                 <DrawerContent className="h-[85vh] mt-[5vh]">
                     <VisuallyHidden>
                         <DrawerTitle>Ürün Detayları</DrawerTitle>
+                        <DrawerDescription>Seçili ürünün fiyat, açıklama ve alerjen bilgileri</DrawerDescription>
                     </VisuallyHidden>
 
                     <div className="flex items-center justify-between p-4 border-b">
@@ -216,10 +221,10 @@ export function MenuContent({ menu, businessName }: MenuContentProps) {
                             onClick={() => setSelectedProduct(null)}
                             className="flex items-center gap-2 px-3 py-2 text-sm font-medium bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-colors"
                         >
-                            <ArrowLeft className="w-4 h-4" />
+                            <HugeIcon icon={ArrowLeft01Icon} className="w-4 h-4" />
                             Geri
                         </button>
-                        <h2 className="text-lg font-semibold">{selectedProduct?.name}</h2>
+                        <h2 className="text-lg font-semibold">{formatDisplayName(selectedProduct?.name)}</h2>
                         <div className="w-[76px]"></div>
                     </div>
 
@@ -247,7 +252,7 @@ export function MenuContent({ menu, businessName }: MenuContentProps) {
                                     />
                                 ) : (
                                     <div className="w-full h-full bg-[#3b8044] flex items-center justify-center">
-                                        <HandPlatter className="w-12 h-12 text-white" />
+                                        <HugeIcon icon={SpoonAndForkIcon} className="w-12 h-12 text-white" />
                                     </div>
                                 )}
                             </div>
@@ -296,4 +301,4 @@ export function MenuContent({ menu, businessName }: MenuContentProps) {
             </Drawer>
         </>
     );
-} 
+}

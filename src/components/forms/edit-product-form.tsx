@@ -15,7 +15,8 @@ import { ColorPicker } from "@/components/ui/color-picker";
 import { UnitSelect } from "@/components/ui/unit-select";
 import { cn } from "@/lib/utils";
 import { Tables, Database } from '@/lib/types/supabase';
-import { Loader2, Check, X } from "lucide-react";
+import { Cancel01Icon, Check, Loading03Icon } from "@hugeicons/core-free-icons";
+import { HugeIcon } from "@/components/ui/huge-icon";
 import { AllergenLabels, ProductTagLabels } from "@/lib/constants";
 import toast from "react-hot-toast";
 
@@ -383,7 +384,7 @@ export function EditProductForm({
                                         onClick={() => handleCoverSelect(index)}
                                     >
                                         {image.is_cover ? (
-                                            <Check className="h-4 w-4 text-white" />
+                                            <HugeIcon icon={Check} className="h-4 w-4 text-white" />
                                         ) : (
                                             <span className="h-4 w-4 rounded-full border-2 border-white" />
                                         )}
@@ -395,7 +396,7 @@ export function EditProductForm({
                                         className="h-8 w-8"
                                         onClick={() => handleImageRemove(index)}
                                     >
-                                        <X className="h-4 w-4 text-white" />
+                                        <HugeIcon icon={Cancel01Icon} className="h-4 w-4 text-white" />
                                     </Button>
                                 </div>
                             </div>
@@ -433,12 +434,12 @@ export function EditProductForm({
                     <Button type="submit" disabled={isSubmitting}>
                         {isSubmitting ? (
                             <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                <HugeIcon icon={Loading03Icon} className="mr-2 h-4 w-4 animate-spin" />
                                 Kaydediliyor
                             </>
                         ) : (
                             <>
-                                <Check className="mr-2 h-4 w-4" />
+                                <HugeIcon icon={Check} className="mr-2 h-4 w-4" />
                                 Kaydet
                             </>
                         )}
@@ -447,4 +448,4 @@ export function EditProductForm({
             </form>
         </Form>
     );
-} 
+}

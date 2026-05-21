@@ -1,50 +1,46 @@
 "use client";
 
-import React, { useCallback, useState, useRef, useEffect } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+
+import Link from "next/link";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import {
+  Add01Icon,
+  ArrowDataTransferHorizontalIcon,
+  Building03Icon,
+  DragDropVerticalIcon,
+  RefreshIcon,
+  Search01Icon,
+  ViewIcon,
+} from "@hugeicons/core-free-icons";
 import {
   DndContext,
-  closestCenter,
   KeyboardSensor,
   PointerSensor,
+  closestCenter,
   useSensor,
   useSensors,
+  type DragEndEvent,
 } from "@dnd-kit/core";
 import {
-  arrayMove,
   SortableContext,
+  arrayMove,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { SortableItem } from "@/components/ui/sortable-item";
-import { Switch } from "@/components/ui/switch";
-import { GripVertical, Eye, Plus, RefreshCw, Building2, ArrowRightLeft } from "lucide-react";
+import toast from "react-hot-toast";
+
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
   DialogTrigger,
-  DialogFooter,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { createClient } from "@/lib/supabase/client";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import Link from "next/link";
-import { ImportService, ImportContext } from "@/lib/services/import-service";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { cn } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -56,26 +52,51 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { useBusinessContext } from '@/lib/contexts/business-context';
-import { Database } from '@/lib/types/supabase';
-import toast from "react-hot-toast";
+import { SortableItem } from "@/components/ui/sortable-item";
+import { Switch } from "@/components/ui/switch";
+import {
+  EmptyState,
+  EntityStack,
+  PageHeader,
+  Toolbar,
+} from "@/components/ui/console-primitives";
+import { createClient } from "@/lib/supabase/client";
+import { useBusinessContext } from "@/lib/contexts/business-context";
+import {
+  ImportContext,
+  ImportRateLimitError,
+  ImportService,
+  type ImportProgress,
+} from "@/lib/services/import-service";
+import type { Database } from "@/lib/types/supabase";
+import { cn } from "@/lib/utils";
 
-type Menu = Database['public']['Tables']['menus']['Row'] & {
-  businesses: Pick<Database['public']['Tables']['businesses']['Row'], 'id' | 'name'>;
+type Menu = Database["public"]["Tables"]["menus"]["Row"] & {
+  businesses: Pick<Database["public"]["Tables"]["businesses"]["Row"], "id" | "name">;
 };
 
-type Business = Pick<Database['public']['Tables']['businesses']['Row'], 'id' | 'name'>;
+type Business = Pick<Database["public"]["Tables"]["businesses"]["Row"], "id" | "name">;
 
 type MenuFormValues = {
   name: string;
-  business_id: string;
 };
 
 const menuFormSchema = z.object({
@@ -83,658 +104,517 @@ const menuFormSchema = z.object({
     .string()
     .min(2, "Menü adı en az 2 karakter olmalıdır")
     .max(50, "Menü adı en fazla 50 karakter olabilir"),
-  business_id: z
-    .string()
-    .min(1, "İşletme seçmelisiniz")
 });
 
 const formatCountdown = (seconds: number) => {
   const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
-  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  const remaining = seconds % 60;
+  return `${minutes}:${remaining.toString().padStart(2, "0")}`;
 };
 
-// Menüleri işletmelere göre gruplamak için helper fonksiyon
-const groupMenusByBusiness = (menus: Menu[]) => {
-  return menus.reduce((groups, menu) => {
-    if (!menu.businesses) return groups;
-
-    const businessId = menu.businesses.id;
-    if (!groups[businessId]) {
-      groups[businessId] = {
-        businessName: menu.businesses.name,
-        menus: []
-      };
-    }
-    groups[businessId].menus.push(menu);
-    return groups;
-  }, {} as Record<string, { businessName: string; menus: Menu[] }>);
-};
+const normalize = (text: string) =>
+  text
+    .toLowerCase()
+    .replace(/ğ/g, "g")
+    .replace(/ü/g, "u")
+    .replace(/ş/g, "s")
+    .replace(/ı/g, "i")
+    .replace(/ö/g, "o")
+    .replace(/ç/g, "c");
 
 const Page = () => {
+  const supabase = createClient();
+  const {
+    hasBusiness,
+    businesses: scopedBusinesses,
+    selectedBusinessId: globalSelectedBusinessId,
+  } = useBusinessContext();
+
   const [mounted, setMounted] = useState(false);
   const [menus, setMenus] = useState<Menu[]>([]);
   const [businesses, setBusinesses] = useState<Business[]>([]);
-  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+
+  const [addOpen, setAddOpen] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState<{
     currentCategory: string;
     currentProduct: string;
-    stats: any;
+    stats: ImportProgress["stats"];
   } | null>(null);
-  const [importContext, setImportContext] = useState<ImportContext>({
+  const [showImportConfirm, setShowImportConfirm] = useState(false);
+  const [showAbortDialog, setShowAbortDialog] = useState(false);
+  const [isRateLimited, setIsRateLimited] = useState(false);
+  const [rateLimitCountdown, setRateLimitCountdown] = useState(0);
+  const [moveMenuId, setMoveMenuId] = useState<string | null>(null);
+  const importContextRef = useRef<ImportContext>({
     menuId: null,
     categoryIds: [],
     aborted: false,
-    paused: false
+    paused: false,
   });
-  const [isRateLimited, setIsRateLimited] = useState(false);
-  const [rateLimitCountdown, setRateLimitCountdown] = useState(0);
-  const [showAbortDialog, setShowAbortDialog] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [moveMenuId, setMoveMenuId] = useState<string | null>(null);
-  const [selectedBusinessId, setSelectedBusinessId] = useState<string | null>(null);
-  const [showImportDialog, setShowImportDialog] = useState(false);
-  const supabase = createClient();
-  const { hasBusiness } = useBusinessContext();
 
   const form = useForm<MenuFormValues>({
     resolver: zodResolver(menuFormSchema),
-    defaultValues: {
-      name: "",
-    },
+    defaultValues: { name: "" },
   });
 
-  const getMenus = useCallback(async () => {
+  const fetchMenus = useCallback(async () => {
     try {
+      const options = scopedBusinesses.map((business) => ({
+        id: business.id,
+        name: business.name,
+      }));
+      setBusinesses(options);
+      if (!globalSelectedBusinessId) {
+        setMenus([]);
+        return;
+      }
       const { data, error } = await supabase
-        .from('menus')
-        .select(`
-          *,
-          businesses (
-            id,
-            name
-          )
-        `)
-        .order('sort_order', { ascending: true });
-
+        .from("menus")
+        .select("*, businesses(id, name)")
+        .eq("business_id", globalSelectedBusinessId)
+        .order("sort_order", { ascending: true });
       if (error) throw error;
-
-      setMenus(data as Menu[] || []);
-
-      const { data: businessData, error: businessError } = await supabase
-        .from('businesses')
-        .select('id, name');
-
-      if (businessError) throw businessError;
-
-      setBusinesses(businessData || []);
-    } catch (error) {
+      setMenus((data ?? []) as Menu[]);
+    } catch {
       toast.error("Veriler yüklenirken bir hata oluştu.");
     }
-  }, [supabase]);
+  }, [globalSelectedBusinessId, scopedBusinesses, supabase]);
 
-  const handleAddMenu = async (values: MenuFormValues) => {
-    try {
-      const { data: newMenu, error } = await supabase
-        .from('menus')
-        .insert({
-          name: values.name,
-          business_id: values.business_id,
-          is_active: true as boolean | null,
-          sort_order: menus.length + 1
-        })
-        .select('*, businesses(id, name)')
-        .single();
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
-      if (error) throw error;
+  useEffect(() => {
+    if (mounted) void fetchMenus();
+  }, [mounted, fetchMenus]);
 
-      if (newMenu) {
-        setMenus(prev => [...prev, {
-          ...newMenu,
-          businesses: newMenu.businesses as Pick<Database['public']['Tables']['businesses']['Row'], 'id' | 'name'>
-        }]);
 
-        toast.success("Menü başarıyla eklendi.");
-        form.reset();
-        setOpen(false);
+  useEffect(() => {
+    const check = () => {
+      const stored = localStorage.getItem("importRateLimit");
+      if (!stored) return;
+      const { timestamp, duration } = JSON.parse(stored);
+      const elapsed = Math.floor((Date.now() - timestamp) / 1000);
+      const remaining = duration - elapsed;
+      if (remaining > 0) {
+        setIsRateLimited(true);
+        setRateLimitCountdown(remaining);
+      } else {
+        localStorage.removeItem("importRateLimit");
+        setIsRateLimited(false);
+        setRateLimitCountdown(0);
       }
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Menü eklenirken bir hata oluştu.");
-    }
-  };
+    };
+    check();
+    const interval = setInterval(check, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (rateLimitCountdown <= 0) return;
+    const timer = setInterval(() => {
+      setRateLimitCountdown((prev) => {
+        const next = prev - 1;
+        if (next <= 0) {
+          localStorage.removeItem("importRateLimit");
+          setIsRateLimited(false);
+          return 0;
+        }
+        return next;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [rateLimitCountdown]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  const handleDragEnd = async (event: any) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = menus.findIndex((item) => item.id === active.id);
+    const newIndex = menus.findIndex((item) => item.id === over.id);
+    const reordered = arrayMove(menus, oldIndex, newIndex).map((item, index) => ({
+      ...item,
+      sort_order: index + 1,
+    }));
+    setMenus(reordered);
+    try {
+      const updates = reordered.map(({ id, sort_order, name, business_id }) => ({
+        id,
+        sort_order,
+        name,
+        business_id,
+      }));
+      const { error } = await supabase.from("menus").upsert(updates, { onConflict: "id" }).select();
+      if (error) throw error;
+      toast.success("Menü sıralaması güncellendi.");
+    } catch {
+      toast.error("Sıralama güncellenirken bir hata oluştu.");
+    }
+  };
 
-    if (active.id !== over.id) {
-      setMenus((items) => {
-        const oldIndex = items.findIndex((item) => item.id === active.id);
-        const newIndex = items.findIndex((item) => item.id === over.id);
-
-        const newItems = arrayMove(items, oldIndex, newIndex);
-
-        const updatedItems = newItems.map((item, index) => ({
-          ...item,
-          sort_order: index + 1,
-        }));
-
-        const updateDatabase = async () => {
-          const updates = updatedItems.map(({ id, sort_order, name, business_id }) => ({
-            id,
-            sort_order,
-            name,
-            business_id
-          }));
-
-          const { error } = await supabase
-            .from("menus")
-            .upsert(updates, { onConflict: 'id' })
-            .select();
-
-          if (error) {
-            toast.error("Menü sıralaması güncellenirken bir hata oluştu.");
-            return;
-          }
-
-          toast.success("Menü sıralaması güncellendi.");
-        };
-
-        updateDatabase();
-        return updatedItems;
-      });
+  const handleAdd = async (values: MenuFormValues) => {
+    if (!globalSelectedBusinessId) {
+      toast.error("Önce bir işletme seçin.");
+      return;
+    }
+    try {
+      const { data, error } = await supabase
+        .from("menus")
+        .insert({
+          name: values.name,
+          business_id: globalSelectedBusinessId,
+          is_active: true,
+          sort_order: menus.length + 1,
+        })
+        .select("*, businesses(id, name)")
+        .single();
+      if (error) throw error;
+      if (data) {
+        setMenus((prev) => [...prev, data as Menu]);
+        toast.success("Menü eklendi.");
+        form.reset();
+        setAddOpen(false);
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Menü eklenemedi.");
     }
   };
 
   const handleActiveChange = async (id: string, checked: boolean) => {
     try {
-      const { error } = await supabase
-        .from("menus")
-        .update({ is_active: checked })
-        .eq("id", id);
-
+      const { error } = await supabase.from("menus").update({ is_active: checked }).eq("id", id);
       if (error) throw error;
-
-      setMenus((prevItems) =>
-        prevItems.map((menuItem) =>
-          menuItem.id === id
-            ? { ...menuItem, is_active: checked }
-            : menuItem
-        )
+      setMenus((prev) =>
+        prev.map((menu) => (menu.id === id ? { ...menu, is_active: checked } : menu)),
       );
-
       toast.success("Menü durumu güncellendi.");
-    } catch (error) {
+    } catch {
       toast.error("Menü durumu güncellenirken bir hata oluştu.");
     }
   };
 
-  const handleBusinessChange = async (menuId: string, businessId: string) => {
+  const handleMove = async (menuId: string, newBusinessId: string) => {
     try {
       const { error } = await supabase
-        .from('menus')
-        .update({ business_id: businessId })
-        .eq('id', menuId);
-
+        .from("menus")
+        .update({ business_id: newBusinessId })
+        .eq("id", menuId);
       if (error) throw error;
-
-      // State'i güncelle
-      setMenus(prev => prev.map(menu =>
-        menu.id === menuId
-          ? {
-            ...menu,
-            business_id: businessId,
-            businesses: businesses.find(b => b.id === businessId) || menu.businesses
-          }
-          : menu
-      ));
-
-      toast.success("Menü başarıyla taşındı.");
-    } catch (error) {
-      console.error('Error updating menu:', error);
+      const target = businesses.find((business) => business.id === newBusinessId);
+      setMenus((prev) =>
+        prev.map((menu) =>
+          menu.id === menuId
+            ? {
+                ...menu,
+                business_id: newBusinessId,
+                businesses: {
+                  id: newBusinessId,
+                  name: target?.name || menu.businesses.name,
+                },
+              }
+            : menu,
+        ),
+      );
+      toast.success(`Menü ${target?.name ?? "yeni işletme"} altına taşındı.`);
+      setMoveMenuId(null);
+    } catch {
       toast.error("Menü taşınırken bir hata oluştu.");
     }
   };
 
   const handleImport = async () => {
-    if (!hasBusiness) {
-      toast.error("Menü içe aktarma için en az bir işletme kaydının olması gerekiyor.");
+    if (!globalSelectedBusinessId) {
+      toast.error("Önce bir işletme seçin.");
       return;
     }
-
-    if (!selectedBusinessId) {
-      toast.error("Lütfen bir işletme seçin.");
-      return;
-    }
-
     setImporting(true);
-    setShowImportDialog(false);
-
+    setShowImportConfirm(false);
     try {
-      // Import context'i oluştur
-      const importContext: ImportContext = {
+      const context: ImportContext = {
         menuId: null,
         categoryIds: [],
         aborted: false,
-        paused: false
+        paused: false,
       };
-
-      // Import işlemini başlat
+      importContextRef.current = context;
       const result = await ImportService.importMenuFromAdisyo(
-        importContext,
-        selectedBusinessId,
-        (progress) => {
-          setImportProgress(progress);
-        }
+        context,
+        globalSelectedBusinessId,
+        (progress) => setImportProgress(progress),
       );
-
-      // Başarılı import sonrası menüleri yeniden yükle
-      await getMenus();
-
-      toast.success(`${result.stats.importedCategories} yeni kategori, ${result.stats.updatedCategories} güncellenen kategori\n${result.stats.importedProducts} yeni ürün, ${result.stats.updatedProducts} güncellenen ürün\n${result.stats.updatedPrices} fiyat güncellendi${result.stats.failedItems.categories.length > 0 || result.stats.failedItems.products.length > 0
-        ? "\n\nBazı öğeler aktarılamadı."
-        : ""
-        }`);
-
+      await fetchMenus();
+      toast.success(
+        `${result.stats.importedCategories} yeni / ${result.stats.updatedCategories} güncel kategori · ${result.stats.importedProducts} yeni / ${result.stats.updatedProducts} güncel ürün`,
+      );
     } catch (error) {
-      console.error('Import hatası:', error);
-
-      let errorMessage = "Menü aktarılırken bir hata oluştu";
-      if (error instanceof Error) {
-        errorMessage = error.message;
-
-        // Rate limit kontrolü
-        if (error.message.includes('rate limit')) {
-          setIsRateLimited(true);
-          const duration = 180; // 3 dakika
-          setRateLimitCountdown(duration);
-
-          // Rate limit bilgisini localStorage'a kaydet
-          localStorage.setItem('importRateLimit', JSON.stringify({
-            timestamp: Date.now(),
-            duration: duration
-          }));
-
-          console.log('Rate limit başlatıldı:', duration, 'saniye');
-        }
+      if (error instanceof ImportRateLimitError) {
+        setIsRateLimited(true);
+        setRateLimitCountdown(error.retryAfterSeconds);
+        localStorage.setItem(
+          "importRateLimit",
+          JSON.stringify({ timestamp: Date.now(), duration: error.retryAfterSeconds }),
+        );
       }
-
-      toast.error(errorMessage);
+      toast.error(error instanceof Error ? error.message : "Menü aktarılırken bir hata oluştu.");
     } finally {
       setImporting(false);
       setImportProgress(null);
-      setSelectedBusinessId(null);
     }
-  };
-
-  const handleAbort = () => {
-    setShowAbortDialog(true);
-    setIsPaused(true);
   };
 
   const handleAbortConfirm = async () => {
     try {
-      // Import context'i güncelle
-      setImportContext(prev => ({ ...prev, aborted: true }));
-      setShowAbortDialog(false);
-      setIsPaused(false);
-
-      // ImportService'e iptal sinyali gönder
-      ImportService.abortImport(importContext);
-
-      // Temizlik işlemleri
-      if (importContext.menuId) {
-        await ImportService.cleanup(importContext);
+      importContextRef.current.aborted = true;
+      ImportService.abortImport(importContextRef.current);
+      if (importContextRef.current.menuId) {
+        await ImportService.cleanup(importContextRef.current);
       }
-
-      // State'leri sıfırla
+      setShowAbortDialog(false);
       setImporting(false);
       setImportProgress(null);
-      setImportContext({
-        menuId: null,
-        categoryIds: [],
-        aborted: false,
-        paused: false
-      });
-
-      toast.success("İşlem başarıyla iptal edildi.");
-    } catch (error) {
-      console.error("İptal işlemi sırasında hata:", error);
-      toast.error("İptal işlemi sırasında bir hata oluştu.");
+      toast.success("İçe aktarma iptal edildi.");
+    } catch {
+      toast.error("İptal sırasında bir hata oluştu.");
     }
   };
-
-  const handleAbortCancel = () => {
-    setShowAbortDialog(false);
-    setIsPaused(false);
-  };
-
-  const handleMoveMenu = async (menuId: string, newBusinessId: string) => {
-    try {
-      const { error } = await supabase
-        .from('menus')
-        .update({ business_id: newBusinessId })
-        .eq('id', menuId);
-
-      if (error) throw error;
-
-      const targetBusiness = businesses.find(b => b.id === newBusinessId);
-
-      setMenus(prev => prev.map(menu =>
-        menu.id === menuId
-          ? {
-            ...menu,
-            business_id: newBusinessId,
-            businesses: {
-              id: newBusinessId,
-              name: targetBusiness?.name || menu.businesses.name
-            }
-          }
-          : menu
-      ));
-
-      toast.success(`Menü başarıyla ${targetBusiness?.name} işletmesine taşındı.`);
-      setMoveMenuId(null);
-    } catch (error) {
-      toast.error("Menü taşınırken bir hata oluştu.");
-    }
-  };
-
-  // Rate limit kontrolü
-  useEffect(() => {
-    const checkRateLimit = () => {
-      const storedLimit = localStorage.getItem('importRateLimit');
-      if (storedLimit) {
-        const { timestamp, duration } = JSON.parse(storedLimit);
-        const now = Date.now();
-        const elapsedSeconds = Math.floor((now - timestamp) / 1000);
-        const remainingSeconds = duration - elapsedSeconds;
-
-        if (remainingSeconds > 0) {
-          setIsRateLimited(true);
-          setRateLimitCountdown(remainingSeconds);
-          console.log('Rate limit aktif:', remainingSeconds, 'saniye kaldı');
-        } else {
-          localStorage.removeItem('importRateLimit');
-          setIsRateLimited(false);
-          setRateLimitCountdown(0);
-          console.log('Rate limit süresi doldu');
-        }
-      }
-    };
-
-    // Sayfa yüklendiğinde kontrol et
-    checkRateLimit();
-
-    // Her saniye kontrol et
-    const interval = setInterval(checkRateLimit, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Rate limit sayacı
-  useEffect(() => {
-    if (rateLimitCountdown > 0) {
-      const timer = setInterval(() => {
-        setRateLimitCountdown(prev => {
-          const newCount = prev - 1;
-          if (newCount <= 0) {
-            localStorage.removeItem('importRateLimit');
-            setIsRateLimited(false);
-            return 0;
-          }
-          return newCount;
-        });
-      }, 1000);
-      return () => clearInterval(timer);
-    }
-  }, [rateLimitCountdown]);
-
-  useEffect(() => {
-    setImportContext(prev => ({ ...prev, paused: isPaused }));
-  }, [isPaused]);
-
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  React.useEffect(() => {
-    if (mounted) {
-      getMenus();
-    }
-  }, [mounted, getMenus]);
 
   if (!mounted) {
     return null;
   }
 
+  const filteredMenus = menus.filter((menu) => {
+    if (statusFilter === "active" && !menu.is_active) return false;
+    if (statusFilter === "inactive" && menu.is_active) return false;
+    if (search && !normalize(menu.name).includes(normalize(search))) return false;
+    return true;
+  });
+
+  const activeMenus = menus.filter((menu) => menu.is_active).length;
+
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Menü Yönetimi</h1>
-        <div className="flex gap-4">
-          <div className="relative">
+    <div>
+      <PageHeader
+        title="Menü yönetimi"
+        description="Menüleri işletmeye göre sıralayın, yayına alın ve içerik detayına geçin."
+        meta={
+          <>
+            <span>{menus.length} toplam</span>
+            <span>{activeMenus} aktif</span>
+            {scopedBusinesses.length ? <span>{scopedBusinesses.length} işletme</span> : null}
+          </>
+        }
+        actions={
+          <>
             <Button
               variant="outline"
-              className="gap-2"
-              onClick={() => setShowImportDialog(true)}
-              disabled={isRateLimited || importing || !hasBusiness}
-              title={!hasBusiness ? "Menü içe aktarma için en az bir işletme kaydının olması gerekiyor" : ""}
+              size="sm"
+              onClick={() => setShowImportConfirm(true)}
+              disabled={isRateLimited || importing || !hasBusiness || !globalSelectedBusinessId}
+              title={!globalSelectedBusinessId ? "Önce bir işletme seçin" : undefined}
             >
-              <RefreshCw
-                className={cn("h-5 w-5", {
-                  "animate-spin": importing,
-                })}
+              <HugeIcon
+                icon={RefreshIcon}
+                size={16}
+                className={cn(importing && "animate-spin")}
               />
-              {isRateLimited ? (
-                <span className="flex items-center gap-2">
-                  <span>Lütfen bekleyin</span>
-                  <span className="text-xs bg-muted px-2 py-1 rounded">
-                    {formatCountdown(rateLimitCountdown)}
-                  </span>
-                </span>
-              ) : (
-                "Adisyodan Menü Getir"
-              )}
+              {isRateLimited ? formatCountdown(rateLimitCountdown) : "Adisyo aktar"}
             </Button>
-            {!hasBusiness && (
-              <div className="absolute -bottom-6 left-0 right-0 text-center">
-                <span className="text-xs text-muted-foreground">
-                  İşletme kaydı gerekiyor
-                </span>
-              </div>
-            )}
-          </div>
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button className="gap-2">
-                <Plus className="h-5 w-5" />
-                Yeni Menü Ekle
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader className="space-y-3 pb-4">
-                <DialogTitle className="text-xl">Yeni Menü Ekle</DialogTitle>
-                <DialogDescription className="text-muted-foreground text-base">
-                  Menüyü oluşturduktan sonra içeriğini düzenleyebilir ve
-                  özelleştirebilirsiniz.
-                </DialogDescription>
-              </DialogHeader>
-
-              <Form {...form}>
-                <form
-                  onSubmit={form.handleSubmit(handleAddMenu)}
-                  className="space-y-6"
-                >
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-base">Menü Adı</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Menü adını giriniz"
-                            className="text-base"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="business_id"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>İşletme</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+            <Dialog open={addOpen} onOpenChange={setAddOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm">
+                  <HugeIcon icon={Add01Icon} size={16} />
+                  Yeni menü
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[480px]">
+                <DialogHeader>
+                  <DialogTitle>Yeni menü</DialogTitle>
+                  <DialogDescription>
+                    Menüyü oluşturduktan sonra kategori ve ürün ekleyebilirsiniz.
+                  </DialogDescription>
+                </DialogHeader>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(handleAdd)} className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Menü adı</FormLabel>
                           <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="İşletme seçin" />
-                            </SelectTrigger>
+                            <Input placeholder="Örn: Yaz menüsü" {...field} />
                           </FormControl>
-                          <SelectContent>
-                            {businesses.map((business) => (
-                              <SelectItem key={business.id} value={business.id}>
-                                {business.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button type="submit" className="w-full text-base">
-                    Ekle
-                  </Button>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
-
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-      >
-        <SortableContext
-          items={menus}
-          strategy={verticalListSortingStrategy}
-        >
-          <div className="space-y-8">
-            {Object.entries(groupMenusByBusiness(menus)).map(([businessId, { businessName, menus: businessMenus }]) => (
-              <div key={businessId} className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Building2 className="h-5 w-5 text-muted-foreground" />
-                  <h3 className="text-lg font-semibold">{businessName}</h3>
-                </div>
-                <div className="space-y-2 pl-7">
-                  {businessMenus.map((item, index) => (
-                    <div
-                      key={item.id}
-                      className="flex items-center justify-between p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
-                    >
-                      <SortableItem id={item.id}>
-                        <div className="flex items-center gap-3 flex-1 cursor-grab">
-                          <GripVertical className="h-5 w-5 text-gray-400" />
-                          <span className="text-gray-400 font-medium text-sm">
-                            #{String(index + 1).padStart(2, "0")}
-                          </span>
-                          <span className="font-medium">{item.name}</span>
-                        </div>
-                      </SortableItem>
-                      <div className="flex items-center gap-4 pl-4 border-l">
-                        <div className="flex items-center gap-2">
-                          <Switch
-                            checked={item.is_active ?? false}
-                            onCheckedChange={(checked) => handleActiveChange(item.id, checked)}
-                          />
-                          <span className="text-sm font-medium text-muted-foreground">
-                            {item.is_active ? "Aktif" : "Pasif"}
-                          </span>
-                        </div>
-                        <Link href={`/dashboard/menu/${item.id}`}>
-                          <Button variant="outline" size="sm" className="gap-2" asChild>
-                            <span>
-                              <Eye className="h-4 w-4" />
-                              İncele
-                            </span>
-                          </Button>
-                        </Link>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-2"
-                          onClick={() => setMoveMenuId(item.id)}
-                        >
-                          <ArrowRightLeft className="h-4 w-4" />
-                          Taşı
-                        </Button>
-                      </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div className="flex justify-end gap-2">
+                      <Button type="button" variant="outline" onClick={() => setAddOpen(false)}>
+                        İptal
+                      </Button>
+                      <Button type="submit">Ekle</Button>
                     </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </SortableContext>
-      </DndContext>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
+          </>
+        }
+      />
 
-      <Dialog open={importing} onOpenChange={() => { }}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader className="space-y-4 pb-6">
-            <DialogTitle className="text-xl">Menü Aktarılıyor</DialogTitle>
-            <DialogDescription className="text-base">
-              Lütfen işlem tamamlanana kadar bekleyin. İptal etmek için aşağıdaki butonu kullanabilirsiniz.
+      <Toolbar className="mt-1">
+        <div className="flex flex-1 flex-wrap items-center gap-2">
+          <div className="relative w-full max-w-sm">
+            <HugeIcon
+              icon={Search01Icon}
+              size={14}
+              className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+            />
+            <Input
+              placeholder="Menü ara"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              className="h-9 pl-8"
+            />
+          </div>
+          <Select
+            value={statusFilter}
+            onValueChange={(value: "all" | "active" | "inactive") => setStatusFilter(value)}
+          >
+            <SelectTrigger className="h-9 w-full sm:w-[150px]">
+              <SelectValue placeholder="Durum" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tümü</SelectItem>
+              <SelectItem value="active">Aktif</SelectItem>
+              <SelectItem value="inactive">Pasif</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </Toolbar>
+
+      {!globalSelectedBusinessId ? (
+        <EmptyState
+          title="İşletme seçilmemiş"
+          description="Menüleri görmek için kenar çubuğundaki işletme seçicisinden bir işletme seçin."
+          icon={Building03Icon}
+        />
+      ) : filteredMenus.length === 0 ? (
+        <EmptyState
+          title={menus.length === 0 ? "Henüz menü yok" : "Sonuç bulunamadı"}
+          description={
+            menus.length === 0
+              ? "Yeni menü oluşturarak ilk yayını başlatın."
+              : "Arama veya filtre kriterlerine uygun menü bulunmuyor."
+          }
+        />
+      ) : (
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={menus} strategy={verticalListSortingStrategy}>
+            <ul className="grid divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
+              {filteredMenus.map((menu, index) => (
+                <li
+                  key={menu.id}
+                  className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-3 py-3 sm:grid-cols-[auto_auto_minmax(0,1fr)_auto_auto_auto] sm:gap-4 sm:px-4"
+                >
+                  <SortableItem id={menu.id}>
+                    <button
+                      type="button"
+                      className="flex size-8 cursor-grab items-center justify-center rounded-md text-muted-foreground transition hover:bg-muted active:cursor-grabbing"
+                      aria-label="Sırala"
+                    >
+                      <HugeIcon icon={DragDropVerticalIcon} size={16} />
+                    </button>
+                  </SortableItem>
+                  <span className="hidden font-mono text-xs text-muted-foreground/70 sm:inline">
+                    #{String(index + 1).padStart(2, "0")}
+                  </span>
+                  <EntityStack
+                    title={menu.name}
+                    subtitle={
+                      <span className="inline-flex items-center gap-1.5">
+                        <span
+                          className={cn(
+                            "size-1.5 rounded-full",
+                            menu.is_active ? "bg-success" : "bg-muted-foreground/60",
+                          )}
+                        />
+                        {menu.is_active ? "Yayında" : "Taslak"}
+                      </span>
+                    }
+                  />
+                  <label className="hidden cursor-pointer items-center gap-2 text-xs text-muted-foreground sm:flex">
+                    <Switch
+                      checked={menu.is_active ?? false}
+                      onCheckedChange={(checked) => handleActiveChange(menu.id, checked)}
+                    />
+                    <span>{menu.is_active ? "Aktif" : "Pasif"}</span>
+                  </label>
+                  {scopedBusinesses.length > 1 ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setMoveMenuId(menu.id)}
+                      className="hidden sm:inline-flex"
+                    >
+                      <HugeIcon icon={ArrowDataTransferHorizontalIcon} size={16} />
+                      <span className="hidden md:inline">Taşı</span>
+                    </Button>
+                  ) : null}
+                  <Button asChild variant="outline" size="sm">
+                    <Link href={`/dashboard/menu/${menu.id}`}>
+                      <HugeIcon icon={ViewIcon} size={16} />
+                      <span className="hidden sm:inline">İncele</span>
+                    </Link>
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </SortableContext>
+        </DndContext>
+      )}
+
+      <Dialog open={importing} onOpenChange={() => {}}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle>Menü aktarılıyor</DialogTitle>
+            <DialogDescription>
+              İşlem tamamlanana kadar lütfen bekleyin. İstediğiniz zaman iptal edebilirsiniz.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-6">
+          <div className="space-y-4">
             <LoadingSpinner />
-            {importProgress && (
-              <div className="space-y-4 bg-muted/50 rounded-lg p-4">
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">
-                    Kategori: {importProgress.currentCategory}
-                  </p>
-                  {importProgress.currentProduct && (
-                    <p className="text-sm font-medium">
-                      Ürün: {importProgress.currentProduct}
-                    </p>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-background rounded p-3">
-                    <p className="text-sm text-muted-foreground mb-1">Kategoriler</p>
-                    <p className="text-lg font-semibold">
+            {importProgress ? (
+              <div className="space-y-2 rounded-md border border-border bg-muted/30 p-4">
+                <p className="text-sm font-medium">Kategori: {importProgress.currentCategory}</p>
+                {importProgress.currentProduct ? (
+                  <p className="text-sm font-medium">Ürün: {importProgress.currentProduct}</p>
+                ) : null}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <div className="text-xs text-muted-foreground">Kategoriler</div>
+                    <div className="text-base font-semibold">
                       {importProgress.stats.importedCategories}/{importProgress.stats.totalCategories}
-                    </p>
+                    </div>
                   </div>
-                  <div className="bg-background rounded p-3">
-                    <p className="text-sm text-muted-foreground mb-1">Ürünler</p>
-                    <p className="text-lg font-semibold">
+                  <div>
+                    <div className="text-xs text-muted-foreground">Ürünler</div>
+                    <div className="text-base font-semibold">
                       {importProgress.stats.importedProducts}/{importProgress.stats.totalProducts}
-                    </p>
+                    </div>
                   </div>
                 </div>
               </div>
-            )}
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={handleAbort}
-            >
-              İçe Aktarmayı İptal Et
+            ) : null}
+            <Button variant="outline" className="w-full" onClick={() => setShowAbortDialog(true)}>
+              İçe aktarmayı iptal et
             </Button>
           </div>
         </DialogContent>
@@ -743,41 +623,41 @@ const Page = () => {
       <AlertDialog open={showAbortDialog} onOpenChange={setShowAbortDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>İçe Aktarmayı İptal Et</AlertDialogTitle>
+            <AlertDialogTitle>İçe aktarmayı iptal et</AlertDialogTitle>
             <AlertDialogDescription>
-              İçe aktarma işlemini iptal etmek istediğinize emin misiniz?
-              Bu işlem geri alınamaz ve şu ana kadar aktarılan veriler silinecektir.
+              İptal ettiğinizde şu ana kadar aktarılan veriler silinecek. Devam etmek istiyor musunuz?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleAbortCancel}>
-              Devam Et
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={handleAbortConfirm}>
-              İptal Et
-            </AlertDialogAction>
+            <AlertDialogCancel>Devam et</AlertDialogCancel>
+            <AlertDialogAction onClick={handleAbortConfirm}>İptal et</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
       <Dialog open={!!moveMenuId} onOpenChange={() => setMoveMenuId(null)}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[420px]">
           <DialogHeader>
-            <DialogTitle>Menüyü Taşı</DialogTitle>
+            <DialogTitle>Menüyü taşı</DialogTitle>
             <DialogDescription>
-              Menüyü taşımak istediğiniz işletmeyi seçin.
+              Menüyü hangi işletmeye taşımak istediğinizi seçin.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
+          <div className="grid gap-2 py-2">
+            <Label>Hedef işletme</Label>
             <Select
-              onValueChange={(businessId) => moveMenuId && handleMoveMenu(moveMenuId, businessId)}
+              onValueChange={(businessId) =>
+                moveMenuId ? void handleMove(moveMenuId, businessId) : null
+              }
             >
               <SelectTrigger>
                 <SelectValue placeholder="İşletme seçin" />
               </SelectTrigger>
               <SelectContent>
                 {businesses
-                  .filter(b => b.id !== menus.find(m => m.id === moveMenuId)?.business_id)
+                  .filter(
+                    (business) => business.id !== menus.find((menu) => menu.id === moveMenuId)?.business_id,
+                  )
                   .map((business) => (
                     <SelectItem key={business.id} value={business.id}>
                       {business.name}
@@ -789,50 +669,29 @@ const Page = () => {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Menü İçe Aktarma</DialogTitle>
-            <DialogDescription>
-              Adisyo'dan içe aktarılacak menünün hangi işletmeye ait olacağını seçin.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label>İşletme</Label>
-              <Select
-                onValueChange={(value) => setSelectedBusinessId(value)}
-                value={selectedBusinessId || undefined}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="İşletme seçin" />
-                </SelectTrigger>
-                <SelectContent>
-                  {businesses.map((business) => (
-                    <SelectItem key={business.id} value={business.id}>
-                      {business.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowImportDialog(false)}
-            >
-              İptal
-            </Button>
-            <Button
-              onClick={handleImport}
-              disabled={!selectedBusinessId}
-            >
-              İçe Aktar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AlertDialog open={showImportConfirm} onOpenChange={setShowImportConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Adisyo&apos;dan içe aktar</AlertDialogTitle>
+            <AlertDialogDescription>
+              <span className="block">
+                Aktif işletme için Adisyo menüsünü içe aktarıyorsunuz. Mevcut menüye yeni kayıtlar
+                eklenecek ve eşleşen kayıtlar güncellenecek.
+              </span>
+              {scopedBusinesses.find((business) => business.id === globalSelectedBusinessId)?.name ? (
+                <span className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-muted px-2 py-1 text-xs font-medium text-foreground">
+                  <HugeIcon icon={Building03Icon} size={12} />
+                  {scopedBusinesses.find((business) => business.id === globalSelectedBusinessId)?.name}
+                </span>
+              ) : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>İptal</AlertDialogCancel>
+            <AlertDialogAction onClick={() => void handleImport()}>İçe aktar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

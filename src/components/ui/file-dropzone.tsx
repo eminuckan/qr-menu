@@ -1,7 +1,7 @@
 import * as React from "react"
 import { useDropzone, DropzoneOptions } from "react-dropzone"
-import { AlertCircle, Loader2 } from "lucide-react"
-import { Alert, AlertDescription } from "./alert"
+import { Loading03Icon } from "@hugeicons/core-free-icons"
+import { HugeIcon } from "./huge-icon"
 import { cn } from "@/lib/utils"
 import toast from "react-hot-toast"
 
@@ -21,7 +21,7 @@ interface FileDropzoneProps extends DropzoneOptions {
 export const FileDropzone = ({
   onDrop,
   isUploading = false,
-  maxSize = 5 * 1024 * 1024, // 5MB default
+  maxSize = 5 * 1024 * 1024,
   minWidth,
   minHeight,
   accept = {
@@ -92,25 +92,25 @@ export const FileDropzone = ({
   })
 
   return (
-    <div className={cn("space-y-4", className)}>
-      <div
-        {...getRootProps()}
-        className={cn(
-          "border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors",
-          isDragActive ? "border-primary bg-primary/10" : "hover:border-primary",
-          className
-        )}
-      >
-        <input {...getInputProps()} />
-        {isUploading ? (
-          <div className="flex items-center justify-center gap-2">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <p>Yükleniyor...</p>
-          </div>
-        ) : (
-          children || "Fotoğraf yüklemek için sürükleyin veya tıklayın"
-        )}
-      </div>
+    <div
+      {...getRootProps()}
+      className={cn(
+        "flex w-full cursor-pointer items-center justify-center rounded-md border-2 border-dashed border-border/60 bg-card p-6 text-center transition-colors hover:border-foreground/40 hover:bg-muted/40",
+        isDragActive && "border-primary bg-primary/5",
+        className,
+      )}
+    >
+      <input {...getInputProps()} />
+      {isUploading ? (
+        <div className="flex items-center gap-2 text-sm">
+          <HugeIcon icon={Loading03Icon} className="h-4 w-4 animate-spin" />
+          <span>Yükleniyor...</span>
+        </div>
+      ) : (
+        children || (
+          <span className="text-sm text-muted-foreground">Sürükleyin veya seçmek için tıklayın</span>
+        )
+      )}
     </div>
   )
-} 
+}

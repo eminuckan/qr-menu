@@ -1,6 +1,7 @@
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Construction } from "lucide-react"
+import { ConstructionIcon } from "@hugeicons/core-free-icons"
+import { HugeIcon } from "@/components/ui/huge-icon"
 
 export const UnderConstruction = () => {
     return (
@@ -8,7 +9,7 @@ export const UnderConstruction = () => {
             <Card className="w-full max-w-md mx-4">
                 <CardHeader className="text-center space-y-4">
                     <div className="mx-auto bg-muted p-4 rounded-full">
-                        <Construction className="h-12 w-12 text-primary" />
+                        <HugeIcon icon={ConstructionIcon} className="h-12 w-12 text-primary" />
                     </div>
                     <div className="space-y-2">
                         <h1 className="text-2xl font-bold text-foreground flex items-center justify-center gap-2">
@@ -32,4 +33,4 @@ export const UnderConstruction = () => {
             </Card>
         </div>
     );
-}; 
+};

@@ -1,61 +1,291 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@plugin '@tailwindcss/typography';
+@plugin 'tailwindcss-animate';
+@plugin 'tailwind-scrollbar-hide';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-brand: hsl(var(--brand));
+  --color-brand-foreground: hsl(var(--brand-foreground));
+  --color-highlight: hsl(var(--highlight));
+  --color-highlight-foreground: hsl(var(--highlight-foreground));
+  --color-landing-primary: hsl(var(--landing-primary));
+  --color-landing-primary-foreground: hsl(var(--landing-primary-foreground));
+  --color-landing-secondary: hsl(var(--landing-secondary));
+  --color-landing-secondary-foreground: hsl(var(--landing-secondary-foreground));
+  --color-landing-accent: hsl(var(--landing-accent));
+  --color-landing-background: hsl(var(--landing-background));
+  --color-landing-text: hsl(var(--landing-text));
+  --font-sans: var(--font-geist-sans), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --radius-xs: calc(var(--radius) - 6px);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --shadow-2xs: var(--shadow-2xs);
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow: var(--shadow);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
+  --shadow-2xl: var(--shadow-2xl);
+  --text-2xs: 0.625rem;
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
+
+@utility react-select-container {
+  /* React Select Stilleri */
+  & .react-select__control {
+    @apply border border-input bg-background;
+  }
+
+  & .react-select__menu {
+    @apply bg-background border border-input rounded-md mt-1 overflow-hidden;
+  }
+
+  & .react-select__option {
+    @apply text-foreground bg-transparent cursor-pointer px-3 py-2;
+  }
+
+  & .react-select__option:hover {
+    @apply bg-gray-100 dark:bg-gray-800;
+  }
+
+  & .react-select__value-container {
+    @apply py-1 px-3;
+  }
+
+  & .react-select__input-container {
+    @apply text-foreground;
+  }
+
+  & .react-select__multi-value {
+    @apply bg-transparent gap-1;
+  }
+
+  & .react-select__multi-value__label {
+    @apply p-0;
+  }
+
+  & .react-select__multi-value__remove {
+    @apply hidden;
+  }
+}
+
+@utility react-select__control {
+  /* React Select Stilleri */
+  .react-select-container & {
+    @apply border border-input bg-background;
+  }
+}
+
+@utility react-select__menu {
+  .react-select-container & {
+    @apply bg-background border border-input rounded-md mt-1 overflow-hidden;
+  }
+}
+
+@utility react-select__option {
+  .react-select-container & {
+    @apply text-foreground bg-transparent cursor-pointer px-3 py-2;
+  }
+
+  .react-select-container &:hover {
+    @apply bg-gray-100 dark:bg-gray-800;
+  }
+}
+
+@utility react-select__value-container {
+  .react-select-container & {
+    @apply py-1 px-3;
+  }
+}
+
+@utility react-select__input-container {
+  .react-select-container & {
+    @apply text-foreground;
+  }
+}
+
+@utility react-select__multi-value {
+  .react-select-container & {
+    @apply bg-transparent gap-1;
+  }
+}
+
+@utility react-select__multi-value__label {
+  .react-select-container & {
+    @apply p-0;
+  }
+}
+
+@utility react-select__multi-value__remove {
+  .react-select-container & {
+    @apply hidden;
+  }
+}
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 240 5.9% 10%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 240 5.9% 10%;
-    --radius: 0.75rem;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
+    --background: oklch(0.9761 0 0);
+    --foreground: oklch(0.1543 0 0);
+    --card: oklch(0.9911 0 0);
+    --card-foreground: oklch(0.1543 0 0);
+    --popover: oklch(0.9911 0 0);
+    --popover-foreground: oklch(0.1543 0 0);
+    --primary: oklch(0.23 0.18 264.49);
+    --primary-foreground: oklch(0.97 0.01 264.49);
+    --secondary: oklch(0.931 0 0);
+    --secondary-foreground: oklch(0.1543 0 0);
+    --muted: oklch(94.915% 0 none);
+    --muted-foreground: oklch(0.6234 0 0);
+    --accent: oklch(0.9 0 0);
+    --accent-foreground: oklch(0.15 0 0);
+    --destructive: oklch(0.5885 0.1691 27.7462);
+    --destructive-foreground: oklch(0.9911 0 0);
+    --success: oklch(0.7914 0.2091 151.66);
+    --success-foreground: oklch(0.2382 0.0197 126.75);
+    --info: oklch(0.5167 0.1934 259.1383);
+    --info-foreground: oklch(0.9851 0 0);
+    --warning: oklch(0.8154 0.1686 76.88);
+    --warning-foreground: oklch(0.2 0.05 76.88);
+    --border: oklch(89.605% 0.00218 17.198);
+    --input: oklch(0.931 0 0);
+    --ring: oklch(0.709 0 0);
+    --chart-1: oklch(0.6847 0.1891 24.77);
+    --chart-2: oklch(0.7154 0.1686 76.88);
+    --chart-3: oklch(0.7819 0.1825 126.75);
+    --chart-4: oklch(0.4067 0.0758 25.95);
+    --chart-5: oklch(0.7611 0.0797 84.52);
+    --sidebar: oklch(0.9581 0 0);
+    --sidebar-foreground: oklch(0.1496 0 0);
+    --sidebar-primary: oklch(0.1496 0 0);
+    --sidebar-primary-foreground: oklch(0.9911 0 0);
+    --sidebar-accent: oklch(92% 0 0);
+    --sidebar-accent-foreground: oklch(0.1496 0 0);
+    --sidebar-border: oklch(0.931 0 0);
+    --sidebar-ring: oklch(0.709 0 0);
+    --radius: 0.825rem;
+    --brand: 199 100% 70%;
+    --brand-foreground: 24 96% 16%;
+    --highlight: 24 100% 55%;
+    --highlight-foreground: 0 0% 100%;
+    --shadow-2xs: 0 1px 0px -50px hsl(0 0% 0% / 0);
+    --shadow-xs: 0 1px 0px -50px hsl(0 0% 0% / 0);
+    --shadow-sm: 0 1px 0px -50px hsl(0 0% 0% / 0), 0 1px 2px -51px hsl(0 0% 0% / 0);
+    --shadow: 0 1px 0px -50px hsl(0 0% 0% / 0), 0 1px 2px -51px hsl(0 0% 0% / 0);
+    --shadow-md: 0 1px 0px -50px hsl(0 0% 0% / 0), 0 2px 4px -51px hsl(0 0% 0% / 0);
+    --shadow-lg: 0 1px 0px -50px hsl(0 0% 0% / 0), 0 4px 6px -51px hsl(0 0% 0% / 0);
+    --shadow-xl: 0 1px 0px -50px hsl(0 0% 0% / 0), 0 8px 10px -51px hsl(0 0% 0% / 0);
+    --shadow-2xl: 0 1px 0px -50px hsl(0 0% 0% / 0);
   }
 
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+    --background: oklch(0.2178 0 0);
+    --foreground: oklch(0.9851 0 0);
+    --card: oklch(20.463% 0 none);
+    --card-foreground: oklch(0.9851 0 0);
+    --popover: oklch(0.2686 0 0);
+    --popover-foreground: oklch(0.9851 0 0);
+    --primary: oklch(0.83 0.13 264.49);
+    --primary-foreground: oklch(0.18 0.06 264.49);
+    --secondary: oklch(0.3211 0 0);
+    --secondary-foreground: oklch(0.9911 0 0);
+    --muted: oklch(24% 0 0);
+    --muted-foreground: oklch(65.004% 0 none);
+    --accent: oklch(0.3 0 0);
+    --accent-foreground: oklch(0.95 0 0);
+    --destructive: oklch(0.5885 0.1691 27.7462);
+    --destructive-foreground: oklch(0.9911 0 0);
+    --success: oklch(0.7914 0.2091 151.66);
+    --success-foreground: oklch(0.2382 0.0197 126.75);
+    --info: oklch(0.5167 0.1934 259.1383);
+    --info-foreground: oklch(0.9851 0 0);
+    --warning: oklch(0.8154 0.1686 76.88);
+    --warning-foreground: oklch(0.2 0.05 76.88);
+    --border: oklch(0.3211 0 0);
+    --input: oklch(0.3211 0 0);
+    --ring: oklch(0.4819 0 0);
+    --chart-1: oklch(0.6847 0.1891 24.77);
+    --chart-2: oklch(0.7154 0.1686 76.88);
+    --chart-3: oklch(0.7819 0.1825 126.75);
+    --chart-4: oklch(0.4067 0.0758 25.95);
+    --chart-5: oklch(0.7611 0.0797 84.52);
+    --sidebar: oklch(0.2478 0 0);
+    --sidebar-foreground: oklch(0.9851 0 0);
+    --sidebar-primary: oklch(0.5071 0.1537 267.1647);
+    --sidebar-primary-foreground: oklch(0.9851 0 0);
+    --sidebar-accent: oklch(0.3211 0 0);
+    --sidebar-accent-foreground: oklch(0.9911 0 0);
+    --sidebar-border: oklch(0.3211 0 0);
+    --sidebar-ring: oklch(0.4386 0 0);
+    --shadow-2xs: 0 1px 0px -50px hsl(0 0% 0% / 0);
+    --shadow-xs: 0 1px 0px -50px hsl(0 0% 0% / 0);
+    --shadow-sm: 0 1px 0px -50px hsl(0 0% 0% / 0), 0 1px 2px -51px hsl(0 0% 0% / 0);
+    --shadow: 0 1px 0px -50px hsl(0 0% 0% / 0), 0 1px 2px -51px hsl(0 0% 0% / 0);
+    --shadow-md: 0 1px 0px -50px hsl(0 0% 0% / 0), 0 2px 4px -51px hsl(0 0% 0% / 0);
+    --shadow-lg: 0 1px 0px -50px hsl(0 0% 0% / 0), 0 4px 6px -51px hsl(0 0% 0% / 0);
+    --shadow-xl: 0 1px 0px -50px hsl(0 0% 0% / 0), 0 8px 10px -51px hsl(0 0% 0% / 0);
+    --shadow-2xl: 0 1px 0px -50px hsl(0 0% 0% / 0);
   }
 }
 
@@ -66,46 +296,9 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
-  }
-}
-
-@layer components {
-
-  /* React Select Stilleri */
-  .react-select-container .react-select__control {
-    @apply border border-input bg-background;
-  }
-
-  .react-select-container .react-select__menu {
-    @apply bg-background border border-input rounded-md mt-1 overflow-hidden;
-  }
-
-  .react-select-container .react-select__option {
-    @apply text-foreground bg-transparent cursor-pointer px-3 py-2;
-  }
-
-  .react-select-container .react-select__option:hover {
-    @apply bg-gray-100 dark:bg-gray-800;
-  }
-
-  .react-select-container .react-select__value-container {
-    @apply py-1 px-3;
-  }
-
-  .react-select-container .react-select__input-container {
-    @apply text-foreground;
-  }
-
-  .react-select-container .react-select__multi-value {
-    @apply bg-transparent gap-1;
-  }
-
-  .react-select-container .react-select__multi-value__label {
-    @apply p-0;
-  }
-
-  .react-select-container .react-select__multi-value__remove {
-    @apply hidden;
+    letter-spacing: 0;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: "cv01", "cv02", "cv03", "cv04", "calt", "liga";
   }
 }
 

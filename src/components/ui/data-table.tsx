@@ -14,11 +14,13 @@ import {
   useReactTable,
   Row,
   RowSelectionState,
+  type Table as ReactTableInstance,
 } from "@tanstack/react-table"
-import { ArrowUpDown, ChevronDown, MoreHorizontal } from "lucide-react"
+import { ArrowDown01Icon } from "@hugeicons/core-free-icons"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import { HugeIcon } from "@/components/ui/huge-icon"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -89,7 +91,7 @@ export function DataTable<TData, TValue>({
   const columns = [
     ...(enableRowSelection === false ? [] : [{
       id: "select",
-      header: ({ table }: { table: any }) => (
+      header: ({ table }: { table: ReactTableInstance<TData> }) => (
         <Checkbox
           checked={
             table.getIsAllPageRowsSelected() ||
@@ -157,7 +159,7 @@ export function DataTable<TData, TValue>({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="ml-auto">
-              Kolonlar <ChevronDown className="ml-2 h-4 w-4" />
+              Kolonlar <HugeIcon icon={ArrowDown01Icon} size={16} className="ml-2" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -255,4 +257,4 @@ export function DataTable<TData, TValue>({
       </div>
     </div>
   )
-} 
+}

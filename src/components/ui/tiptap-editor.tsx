@@ -14,14 +14,15 @@ import {
   SelectValue,
 } from "./select";
 import {
-  Bold,
-  Italic,
-  List,
-  ListOrdered,
   AlignLeft,
   AlignCenter,
   AlignRight,
-} from "lucide-react";
+  LeftToRightListBulletIcon,
+  LeftToRightListNumberIcon,
+  TextBoldIcon,
+  TextItalicIcon,
+} from "@hugeicons/core-free-icons";
+import { HugeIcon } from "./huge-icon";
 import { forwardRef, useEffect, useImperativeHandle, useState } from "react";
 
 
@@ -32,6 +33,13 @@ interface TiptapEditorProps {
   onChange?: (value: string) => void;
 }
 
+export interface TiptapEditorHandle {
+  getValue: () => string | undefined;
+  setValue: (content: string) => boolean | undefined;
+  focus: () => boolean | undefined;
+  blur: () => boolean | undefined;
+}
+
 const headingOptions = [
   { value: "p", label: "Normal" },
   { value: "h1", label: "Başlık 1" },
@@ -39,7 +47,7 @@ const headingOptions = [
   { value: "h3", label: "Başlık 3" },
 ];
 
-export const TiptapEditor = forwardRef<any, TiptapEditorProps>(
+export const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(
   ({ value, onBlur, name, onChange }, ref) => {
     const [editorValue, setEditorValue] = useState(value);
     const editor = useEditor({
@@ -126,7 +134,7 @@ export const TiptapEditor = forwardRef<any, TiptapEditorProps>(
               pressed={editor?.isActive("bold")}
               onPressedChange={() => editor?.chain().focus().toggleBold().run()}
             >
-              <Bold className="h-4 w-4" />
+              <HugeIcon icon={TextBoldIcon} className="h-4 w-4" />
             </Toggle>
 
             <Toggle
@@ -134,7 +142,7 @@ export const TiptapEditor = forwardRef<any, TiptapEditorProps>(
               pressed={editor?.isActive("italic")}
               onPressedChange={() => editor?.chain().focus().toggleItalic().run()}
             >
-              <Italic className="h-4 w-4" />
+              <HugeIcon icon={TextItalicIcon} className="h-4 w-4" />
             </Toggle>
 
             <Toggle
@@ -142,7 +150,7 @@ export const TiptapEditor = forwardRef<any, TiptapEditorProps>(
               pressed={editor?.isActive("bulletList")}
               onPressedChange={() => editor?.chain().focus().toggleBulletList().run()}
             >
-              <List className="h-4 w-4" />
+              <HugeIcon icon={LeftToRightListBulletIcon} className="h-4 w-4" />
             </Toggle>
 
             <Toggle
@@ -150,7 +158,7 @@ export const TiptapEditor = forwardRef<any, TiptapEditorProps>(
               pressed={editor?.isActive("orderedList")}
               onPressedChange={() => editor?.chain().focus().toggleOrderedList().run()}
             >
-              <ListOrdered className="h-4 w-4" />
+              <HugeIcon icon={LeftToRightListNumberIcon} className="h-4 w-4" />
             </Toggle>
 
             <div className="flex items-center gap-0.5 border-l ml-1 pl-1">
@@ -159,7 +167,7 @@ export const TiptapEditor = forwardRef<any, TiptapEditorProps>(
                 pressed={editor?.isActive({ textAlign: "left" })}
                 onPressedChange={() => editor?.chain().focus().setTextAlign("left").run()}
               >
-                <AlignLeft className="h-4 w-4" />
+                <HugeIcon icon={AlignLeft} className="h-4 w-4" />
               </Toggle>
 
               <Toggle
@@ -167,7 +175,7 @@ export const TiptapEditor = forwardRef<any, TiptapEditorProps>(
                 pressed={editor?.isActive({ textAlign: "center" })}
                 onPressedChange={() => editor?.chain().focus().setTextAlign("center").run()}
               >
-                <AlignCenter className="h-4 w-4" />
+                <HugeIcon icon={AlignCenter} className="h-4 w-4" />
               </Toggle>
 
               <Toggle
@@ -175,7 +183,7 @@ export const TiptapEditor = forwardRef<any, TiptapEditorProps>(
                 pressed={editor?.isActive({ textAlign: "right" })}
                 onPressedChange={() => editor?.chain().focus().setTextAlign("right").run()}
               >
-                <AlignRight className="h-4 w-4" />
+                <HugeIcon icon={AlignRight} className="h-4 w-4" />
               </Toggle>
             </div>
           </div>

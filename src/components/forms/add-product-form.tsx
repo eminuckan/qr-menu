@@ -12,7 +12,8 @@ import { TiptapEditor } from "@/components/ui/tiptap-editor";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { UnitSelect } from "@/components/ui/unit-select";
 import { Tables, Database } from '@/lib/types/supabase';
-import { Loader2, Check } from "lucide-react";
+import { Check, Loading03Icon } from "@hugeicons/core-free-icons";
+import { HugeIcon } from "@/components/ui/huge-icon";
 import { AllergenLabels, ProductTagLabels } from "@/lib/constants";
 import toast from "react-hot-toast";
 
@@ -273,12 +274,12 @@ export function AddProductForm({
                     <Button type="submit" disabled={isSubmitting}>
                         {isSubmitting ? (
                             <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                <HugeIcon icon={Loading03Icon} className="mr-2 h-4 w-4 animate-spin" />
                                 Kaydediliyor
                             </>
                         ) : (
                             <>
-                                <Check className="mr-2 h-4 w-4" />
+                                <HugeIcon icon={Check} className="mr-2 h-4 w-4" />
                                 Kaydet
                             </>
                         )}
@@ -287,4 +288,4 @@ export function AddProductForm({
             </form>
         </Form>
     );
-} 
+}

@@ -1,137 +1,117 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import Link from "next/link";
+import {
+  Add01Icon,
+  ArrowLeft01Icon,
+  Building03Icon,
+} from "@hugeicons/core-free-icons";
+
+import { Button } from "@/components/ui/button";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import {
+  EmptyState,
+  PageHeader,
+} from "@/components/ui/console-primitives";
 import { QRCustomization } from "@/components/sections/qr-customization";
 import { QRList } from "@/components/sections/qr-list";
-import { Button } from "@/components/ui/button";
-import { Plus, ArrowLeft } from "lucide-react";
-import { Tables } from "@/lib/types/supabase";
-import { BusinessService } from "@/lib/services/business-service";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
-import toast from "react-hot-toast";
+import { useBusinessContext } from "@/lib/contexts/business-context";
+import type { Tables } from "@/lib/types/supabase";
 
 export default function QRSettingsPage() {
-    const [showCustomization, setShowCustomization] = useState(false);
-    const [editingQR, setEditingQR] = useState<Tables<'qr_codes'> | null>(null);
-    const [businesses, setBusinesses] = useState<Tables<'businesses'>[]>([]);
-    const [selectedBusinessId, setSelectedBusinessId] = useState<string>("");
+  const { selectedBusiness, selectedBusinessId, loading } = useBusinessContext();
+  const [showCustomization, setShowCustomization] = useState(false);
+  const [editingQR, setEditingQR] = useState<Tables<"qr_codes"> | null>(null);
 
-    useEffect(() => {
-        loadBusinesses();
-    }, []);
+  const toggleCustomization = () => {
+    setShowCustomization((prev) => {
+      const next = !prev;
+      if (!next) setEditingQR(null);
+      return next;
+    });
+  };
 
-    const loadBusinesses = async () => {
-        try {
-            const data = await BusinessService.getBusinesses();
-            setBusinesses(data);
+  const handleEdit = (qr: Tables<"qr_codes">) => {
+    setEditingQR(qr);
+    setShowCustomization(true);
+  };
 
-            // İşletme varsa ilk işletmeyi seç
-            if (data && data.length > 0) {
-                setSelectedBusinessId(data[0].id);
-            }
-        } catch (error) {
-            toast.error("İşletmeler yüklenirken bir hata oluştu");
-        }
-    };
-
-    const handleEdit = (qr: Tables<'qr_codes'>) => {
-        setEditingQR(qr);
-        setShowCustomization(true);
-    };
-
-    const toggleCustomization = () => {
-        setShowCustomization(!showCustomization);
-        if (showCustomization) {
-            setEditingQR(null);
-        }
-    };
-
-    // İşletme seçili değilse veya işletme yoksa içeriği gösterme
-    if (!selectedBusinessId || businesses.length === 0) {
-        return (
-            <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                    <h1 className="text-3xl font-bold">QR Kodları</h1>
-                    <Select
-                        value={selectedBusinessId}
-                        onValueChange={setSelectedBusinessId}
-                    >
-                        <SelectTrigger className="w-[240px]">
-                            <SelectValue placeholder="İşletme seçin" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {businesses.map((business) => (
-                                <SelectItem key={business.id} value={business.id}>
-                                    {business.name}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className="text-center text-muted-foreground">
-                    Lütfen bir işletme seçin
-                </div>
-            </div>
-        );
-    }
-
+  if (loading) {
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <h1 className="text-3xl font-bold">QR Kodları</h1>
-                <div className="flex items-center gap-4">
-                    <Select
-                        value={selectedBusinessId}
-                        onValueChange={setSelectedBusinessId}
-                    >
-                        <SelectTrigger className="w-[240px]">
-                            <SelectValue placeholder="İşletme seçin" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {businesses.map((business) => (
-                                <SelectItem key={business.id} value={business.id}>
-                                    {business.name}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    <Button onClick={toggleCustomization}>
-                        {showCustomization ? (
-                            <>
-                                <ArrowLeft className="h-4 w-4 mr-2" />
-                                Geri Dön
-                            </>
-                        ) : (
-                            <>
-                                <Plus className="h-4 w-4 mr-2" />
-                                Yeni QR Kod Ekle
-                            </>
-                        )}
-                    </Button>
-                </div>
-            </div>
-
-            {showCustomization ? (
-                <QRCustomization
-                    editingQR={editingQR}
-                    selectedBusiness={businesses.find(b => b.id === selectedBusinessId) || null}
-                    onSave={() => {
-                        setShowCustomization(false);
-                        setEditingQR(null);
-                    }}
-                />
-            ) : (
-                <QRList
-                    onEdit={handleEdit}
-                    selectedBusinessId={selectedBusinessId}
-                />
-            )}
-        </div>
+      <div>
+        <PageHeader title="QR tasarımı" />
+        <div className="grid place-items-center py-16 text-sm text-muted-foreground">Yükleniyor...</div>
+      </div>
     );
-} 
+  }
+
+  if (!selectedBusinessId || !selectedBusiness) {
+    return (
+      <div>
+        <PageHeader
+          title="QR tasarımı"
+          description="Müşterilerin tarayacağı QR kodlarını oluşturun, kişiselleştirin ve indirin."
+        />
+        <EmptyState
+          title="İşletme seçilmemiş"
+          description="QR kodlarını yönetmek için önce kenar çubuğundan bir işletme seçin."
+          icon={Building03Icon}
+          action={
+            <Button asChild size="sm">
+              <Link href="/dashboard/settings/business-settings">
+                <HugeIcon icon={Add01Icon} size={16} />
+                İşletme oluştur
+              </Link>
+            </Button>
+          }
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <PageHeader
+        title={showCustomization ? (editingQR ? "QR kodunu düzenle" : "Yeni QR kodu") : "QR tasarımı"}
+        description={
+          showCustomization
+            ? "Renkleri, logoyu ve adı düzenleyin; kaydet butonuyla yayına alın."
+            : "Bu işletmeye ait QR kodlarını yönetin."
+        }
+        meta={
+          <span className="inline-flex items-center gap-1.5">
+            <HugeIcon icon={Building03Icon} size={14} />
+            {selectedBusiness.name}
+          </span>
+        }
+        actions={
+          showCustomization ? (
+            <Button variant="outline" size="sm" onClick={toggleCustomization}>
+              <HugeIcon icon={ArrowLeft01Icon} size={16} />
+              Geri dön
+            </Button>
+          ) : (
+            <Button size="sm" onClick={toggleCustomization}>
+              <HugeIcon icon={Add01Icon} size={16} />
+              Yeni QR kodu
+            </Button>
+          )
+        }
+      />
+
+      {showCustomization ? (
+        <QRCustomization
+          editingQR={editingQR}
+          selectedBusiness={selectedBusiness as unknown as Tables<"businesses">}
+          onSave={() => {
+            setShowCustomization(false);
+            setEditingQR(null);
+          }}
+        />
+      ) : (
+        <QRList onEdit={handleEdit} selectedBusinessId={selectedBusinessId} />
+      )}
+    </div>
+  );
+}

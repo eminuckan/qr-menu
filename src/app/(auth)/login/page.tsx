@@ -1,54 +1,76 @@
-"use client";
-
 import { LoginForm } from "@/components/forms/LoginForm";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  CardFooter,
-} from "@/components/ui/card";
-import { QrCode, ChefHat } from "lucide-react";
+import { ChefHatIcon, QrCodeIcon } from "@hugeicons/core-free-icons";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import Link from "next/link";
 
-export default function LoginPage() {
+type LoginPageProps = {
+  searchParams?: Promise<{
+    next?: string;
+  }>;
+};
+
+function getSafeNext(next?: string) {
+  return next?.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
+}
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const params = await searchParams;
+  const next = getSafeNext(params?.next);
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-stone-100 via-stone-200 to-stone-300 relative overflow-hidden">
-      {/* Arkaplan Desenleri */}
-      <div className="absolute inset-0 bg-grid-stone-800/[0.02] -z-10" />
-      <div className="absolute inset-0 flex items-center justify-center opacity-5">
-        <QrCode className="w-[800px] h-[800px] animate-pulse" />
-      </div>
-
-      <div className="w-full max-w-[400px] p-4 relative z-10">
-        <Card className="backdrop-blur-sm bg-white/90 shadow-xl">
-          <CardHeader className="space-y-4">
-            <div className="flex justify-center mb-4">
-              <div className="p-3 bg-stone-100 rounded-full">
-                <ChefHat className="w-10 h-10 text-stone-600" />
-              </div>
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#f6f6f4] px-4 py-10 text-foreground">
+      <HugeIcon icon={QrCodeIcon} className="pointer-events-none absolute -right-24 -top-24 size-96 text-zinc-200" />
+      <section className="relative grid w-full max-w-5xl overflow-hidden rounded-lg border bg-white shadow-sm lg:grid-cols-[1fr_420px]">
+        <div className="hidden min-h-[560px] flex-col justify-between border-r bg-zinc-950 p-8 text-white lg:flex">
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 items-center justify-center rounded-md bg-white text-zinc-950">
+              <HugeIcon icon={ChefHatIcon} className="size-5" />
             </div>
-            <CardTitle className="text-2xl text-center font-bold">
-              QR Menü Yönetimi
-            </CardTitle>
-            <CardDescription className="text-center">
-              Dijital menü yönetim sistemine hoş geldiniz
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <LoginForm />
-          </CardContent>
-          <CardFooter className="flex flex-col gap-4">
-            <Button
-              variant="link"
-              className="text-sm text-stone-600 hover:text-stone-800"
-            >
-              Şifremi Unuttum
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
-    </div>
+            <span className="text-base font-semibold">QRFloww</span>
+          </div>
+          <div className="max-w-md space-y-4">
+            <h1 className="text-4xl font-semibold tracking-tight">Restoran operasyonunuzu tek panelden yönetin.</h1>
+            <p className="text-base leading-7 text-zinc-300">
+              Menüleri, QR kodları, işletme ayarlarını ve içe aktarma süreçlerini güvenli oturumla yönetin.
+            </p>
+          </div>
+          <div className="grid grid-cols-3 gap-3 text-sm text-zinc-300">
+            <div className="rounded-md border border-white/10 p-3">
+              <strong className="block text-white">Menü</strong>
+              Canlı içerik
+            </div>
+            <div className="rounded-md border border-white/10 p-3">
+              <strong className="block text-white">QR</strong>
+              Yayın takibi
+            </div>
+            <div className="rounded-md border border-white/10 p-3">
+              <strong className="block text-white">Auth</strong>
+              SSR oturum
+            </div>
+          </div>
+        </div>
+        <div className="p-6 sm:p-8">
+          <div className="mb-8 flex items-center gap-3 lg:hidden">
+            <div className="flex size-9 items-center justify-center rounded-md bg-zinc-950 text-white">
+              <HugeIcon icon={ChefHatIcon} className="size-5" />
+            </div>
+            <span className="font-semibold">QRFloww</span>
+          </div>
+          <div className="mb-6 space-y-2">
+            <h2 className="text-2xl font-semibold tracking-tight">Giriş yap</h2>
+            <p className="text-sm leading-6 text-muted-foreground">
+              Yönetim paneline devam etmek için hesabınızla giriş yapın.
+            </p>
+          </div>
+          <LoginForm next={next} />
+          <p className="mt-6 text-center text-sm text-muted-foreground">
+            Hesabınız yok mu?{" "}
+            <Link href="/register" className="font-medium text-foreground underline-offset-4 hover:underline">
+              Hesap oluşturun
+            </Link>
+          </p>
+        </div>
+      </section>
+    </main>
   );
 }

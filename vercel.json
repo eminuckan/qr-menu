@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/adisyo/sync/cron",
+      "schedule": "*/15 7-23 * * *"
+    }
+  ]
+}

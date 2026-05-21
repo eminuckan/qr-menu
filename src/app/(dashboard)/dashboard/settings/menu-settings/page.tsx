@@ -1,91 +1,68 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { MenuCustomization } from "@/components/sections/menu-customization";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import Link from "next/link";
+import { Add01Icon, Building03Icon } from "@hugeicons/core-free-icons";
 
-import { MenuSettingsService } from "@/lib/services/menu-settings-service";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tables } from "@/lib/types/supabase";
-import { BusinessService } from "@/lib/services/business-service";
-import { Loading } from "@/components/ui/loading";
-import toast from "react-hot-toast";
+import { Button } from "@/components/ui/button";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import {
+  EmptyState,
+  PageHeader,
+} from "@/components/ui/console-primitives";
+import { MenuCustomization } from "@/components/sections/menu-customization";
+import { useBusinessContext } from "@/lib/contexts/business-context";
 
 export default function MenuSettingsPage() {
-    const [businesses, setBusinesses] = useState<Tables<'businesses'>[]>([]);
-    const [selectedBusinessId, setSelectedBusinessId] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const router = useRouter();
+  const { selectedBusinessId, selectedBusiness, loading } = useBusinessContext();
 
-    useEffect(() => {
-        const checkBusinesses = async () => {
-            try {
-                const businesses = await BusinessService.getBusinesses();
-                setBusinesses(businesses);
-
-                if (businesses.length === 0) {
-                    // İşletme yoksa business-settings sayfasına yönlendir
-                    router.push("/dashboard/settings/business-settings");
-                    return;
-                }
-
-                // Varsayılan olarak ilk işletmeyi seç
-                setSelectedBusinessId(businesses[0].id);
-            } catch (error) {
-                toast.error("İşletme bilgileri alınırken bir hata oluştu");
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        checkBusinesses();
-    }, [router, toast]);
-
-    // Business değiştiğinde komponenti yeniden render et
-    const handleBusinessChange = (businessId: string) => {
-        try {
-            setSelectedBusinessId(businessId);
-        } catch (error) {
-            toast.error("İşletme değiştirilirken bir hata oluştu");
-        }
-    };
-
-    if (isLoading) {
-        return <Loading className="min-h-[200px]" />;
-    }
-
-    if (businesses.length === 0) {
-        return null; // Yönlendirme yapıldığı için boş dön
-    }
-
+  if (loading) {
     return (
-        <div className="min-h-screen pb-20">
-            <div className="flex items-center gap-4 mb-6">
-                <h1 className="text-2xl font-bold">Menü Ayarları</h1>
-                <Select
-                    value={selectedBusinessId || undefined}
-                    onValueChange={handleBusinessChange}
-                >
-                    <SelectTrigger className="w-[300px]">
-                        <SelectValue placeholder="İşletme seçin" />
-                    </SelectTrigger>
-                    <SelectContent className="min-w-[300px]">
-                        {businesses.map((business) => (
-                            <SelectItem key={business.id} value={business.id}>
-                                {business.name}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
-
-            {selectedBusinessId && (
-                <MenuCustomization
-                    key={selectedBusinessId} // Key ekleyerek komponentin yeniden oluşturulmasını sağlıyoruz
-                    businessId={selectedBusinessId}
-                />
-            )}
-        </div>
+      <div>
+        <PageHeader title="Menü görünümü" />
+        <div className="grid place-items-center py-16 text-sm text-muted-foreground">Yükleniyor...</div>
+      </div>
     );
-} 
+  }
+
+  if (!selectedBusinessId) {
+    return (
+      <div>
+        <PageHeader
+          title="Menü görünümü"
+          description="Müşterinin gördüğü karşılama ekranını kişiselleştirin."
+        />
+        <EmptyState
+          title="İşletme seçilmemiş"
+          description="Menü görünümünü düzenlemek için önce kenar çubuğundan bir işletme seçin."
+          icon={Building03Icon}
+          action={
+            <Button asChild size="sm">
+              <Link href="/dashboard/settings/business-settings">
+                <HugeIcon icon={Add01Icon} size={16} />
+                İşletme oluştur
+              </Link>
+            </Button>
+          }
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <PageHeader
+        title="Menü görünümü"
+        description="Müşterinin gördüğü karşılama ekranı, logo, arka plan ve buton ayarları."
+        meta={
+          selectedBusiness ? (
+            <span className="inline-flex items-center gap-1.5">
+              <HugeIcon icon={Building03Icon} size={14} />
+              {selectedBusiness.name}
+            </span>
+          ) : null
+        }
+      />
+      <MenuCustomization key={selectedBusinessId} businessId={selectedBusinessId} />
+    </div>
+  );
+}

@@ -1,7 +1,8 @@
 "use client";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Store } from "lucide-react";
+import { Store01Icon } from "@hugeicons/core-free-icons";
+import { HugeIcon } from "@/components/ui/huge-icon";
 import { useBusinessContext } from "@/lib/contexts/business-context";
 
 export function BusinessAlert() {
@@ -11,7 +12,7 @@ export function BusinessAlert() {
 
     return (
         <Alert variant="warning" className="mb-4">
-            <Store className="h-5 w-5" />
+            <HugeIcon icon={Store01Icon} className="h-5 w-5" />
             <AlertTitle className="text-amber-800 font-semibold text-[15px]">
                 İşletme Bulunamadı
             </AlertTitle>
@@ -23,4 +24,4 @@ export function BusinessAlert() {
             </AlertDescription>
         </Alert>
     );
-} 
+}

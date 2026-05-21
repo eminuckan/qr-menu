@@ -20,14 +20,14 @@ export function MenuWelcome({ settings, menu }: MenuWelcomeProps) {
     const router = useRouter();
     const { setDrawerOpen } = useMenu();
     const [showLoader, setShowLoader] = useState(true);
-    const [loaderAnimation, setLoaderAnimation] = useState<any>(null);
+    const [loaderAnimation, setLoaderAnimation] = useState<Record<string, unknown> | null>(null);
 
     useEffect(() => {
         // Loader animasyonu varsa ve JSON ise yükle
         if (settings.loader_url?.endsWith('.json')) {
             fetch(settings.loader_url)
                 .then(res => res.json())
-                .then(data => setLoaderAnimation(data))
+                .then(data => setLoaderAnimation(data as Record<string, unknown>))
                 .catch(error => {
                     console.error('Loader animasyonu yüklenirken hata:', error);
                     setShowLoader(false);
@@ -124,4 +124,4 @@ export function MenuWelcome({ settings, menu }: MenuWelcomeProps) {
             </button>
         </div>
     );
-} 
+}

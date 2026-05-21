@@ -338,7 +338,7 @@ export default function Home() {
               </div>
             </div>
             <p className="text-landing-text/60">
-              "QR Floww sayesinde menümüzü dijitalleştirdik ve müşterilerimizden çok olumlu geri dönüşler aldık. Kullanımı çok kolay ve pratik."
+              &quot;QR Floww sayesinde menümüzü dijitalleştirdik ve müşterilerimizden çok olumlu geri dönüşler aldık. Kullanımı çok kolay ve pratik.&quot;
             </p>
           </div>
           <div className="bg-landing-background p-8 rounded-3xl shadow-lg">
@@ -352,7 +352,7 @@ export default function Home() {
               </div>
             </div>
             <p className="text-landing-text/60">
-              "Menü güncelleme işlemlerimiz artık çok daha hızlı. Fiyat değişikliklerini anında yapabiliyoruz. Harika bir sistem!"
+              &quot;Menü güncelleme işlemlerimiz artık çok daha hızlı. Fiyat değişikliklerini anında yapabiliyoruz. Harika bir sistem!&quot;
             </p>
           </div>
           <div className="bg-landing-background p-8 rounded-3xl shadow-lg">
@@ -366,7 +366,7 @@ export default function Home() {
               </div>
             </div>
             <p className="text-landing-text/60">
-              "Müşterilerimiz QR menümüzü çok beğeniyor. Özellikle fotoğraflı menü seçeneği sayesinde ürünlerimizi daha iyi sergileyebiliyoruz."
+              &quot;Müşterilerimiz QR menümüzü çok beğeniyor. Özellikle fotoğraflı menü seçeneği sayesinde ürünlerimizi daha iyi sergileyebiliyoruz.&quot;
             </p>
           </div>
         </div>

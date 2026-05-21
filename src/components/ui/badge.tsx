@@ -1,20 +1,24 @@
 import * as React from "react"
+import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  "inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden whitespace-nowrap rounded-md px-2 py-[3px] text-xs font-medium ring-1 ring-inset ring-transparent transition-[color,box-shadow,background-color] focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&>svg]:size-3 [&>svg]:pointer-events-none",
   {
     variants: {
       variant: {
         default:
-          "border-transparent bg-primary text-primary-foreground hover:bg-primary/80",
+          "bg-primary text-primary-foreground ring-primary/20 [a&]:hover:bg-primary/90",
         secondary:
-          "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
+          "bg-secondary text-secondary-foreground ring-secondary/20 [a&]:hover:bg-secondary/90",
         destructive:
-          "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
-        outline: "text-foreground",
+          "bg-destructive text-white ring-destructive/25 [a&]:hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40",
+        outline: "bg-background text-foreground ring-border [a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
+        success: "bg-success text-success-foreground ring-success/35 [a&]:hover:bg-success/90",
+        warning: "bg-warning text-warning-foreground ring-warning/40 [a&]:hover:bg-warning/20",
+        accent: "bg-accent text-accent-foreground ring-accent/25 [a&]:hover:bg-accent/90",
       },
     },
     defaultVariants: {
@@ -24,12 +28,16 @@ const badgeVariants = cva(
 )
 
 export interface BadgeProps
-  extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof badgeVariants> {}
+  extends React.HTMLAttributes<HTMLSpanElement>,
+    VariantProps<typeof badgeVariants> {
+  asChild?: boolean
+}
 
-function Badge({ className, variant, ...props }: BadgeProps) {
+function Badge({ className, variant, asChild = false, ...props }: BadgeProps) {
+  const Comp = asChild ? Slot : "span"
+
   return (
-    <div className={cn(badgeVariants({ variant }), className)} {...props} />
+    <Comp data-slot="badge" className={cn(badgeVariants({ variant }), className)} {...props} />
   )
 }
 

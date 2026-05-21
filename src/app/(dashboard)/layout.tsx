@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import { Sidebar } from "@/components/layout/sidebar";
-import { Geist_Mono, Geist } from "next/font/google"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Store } from "lucide-react";
-import { BusinessService } from "@/lib/services/business-service";
+import { Geist } from "next/font/google"
+import { redirect } from "next/navigation";
+
 import { cn } from "@/lib/utils";
-import { BusinessAlert } from "@/components/sections/business-alert";
 import { BusinessProvider } from "@/lib/contexts/business-context";
+import { getBusinessScope } from "@/lib/business-scope";
+import { createClient } from "@/lib/supabase/server";
+import { DashboardShell } from "@/components/layout/dashboard-shell";
 
 const geistSans = Geist({
   subsets: ["latin"],
@@ -19,24 +19,27 @@ export const metadata: Metadata = {
 };
 
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const { businesses, selectedBusinessId } = await getBusinessScope(supabase, user.id);
+
   return (
-    <div className={cn("min-h-screen bg-background", geistSans.variable, "font-sans")}>
-      <div className="flex">
-        <Sidebar />
-        <main className="flex-1 ml-16 lg:ml-64 transition-all duration-300">
-          <div className="container mx-auto p-6">
-            <BusinessProvider>
-              <BusinessAlert />
-              {children}
-            </BusinessProvider>
-          </div>
-        </main>
-      </div>
+    <div className={cn(geistSans.variable, "font-sans")}>
+      <BusinessProvider initialBusinesses={businesses} initialSelectedBusinessId={selectedBusinessId}>
+        <DashboardShell userEmail={user.email ?? ""}>{children}</DashboardShell>
+      </BusinessProvider>
     </div>
   );
 }

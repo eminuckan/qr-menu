@@ -2,7 +2,8 @@
 import * as React from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { X } from "lucide-react"
+import { Cancel01Icon } from "@hugeicons/core-free-icons"
+import { HugeIcon } from "@/components/ui/huge-icon"
 import {
   Popover,
   PopoverContent,
@@ -68,7 +69,7 @@ export function AllergenSelect({
                   }}
                 >
                   {AllergenLabels[allergen]}
-                  <X className="ml-1 h-3 w-3" />
+                  <HugeIcon icon={Cancel01Icon} className="ml-1 h-3 w-3" />
                 </Badge>
               ))}
             </div>
@@ -107,4 +108,4 @@ export function AllergenSelect({
       </PopoverContent>
     </Popover>
   )
-} 
+}

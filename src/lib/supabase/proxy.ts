@@ -1,22 +1,24 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { protectedRoutes, authRoutes } from '../authRoutes'
+import { getSupabaseConfig } from './config'
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
   })
+  const { url, publishableKey } = getSupabaseConfig()
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    url,
+    publishableKey,
     {
       cookies: {
         getAll() {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           supabaseResponse = NextResponse.next({
             request,
           })
@@ -38,32 +40,30 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  const pathname = request.nextUrl.pathname
+  const isProtectedRoute = protectedRoutes.some(route =>
+    pathname === route || pathname.startsWith(`${route}/`)
+  )
+  const isAuthRoute = authRoutes.some(route =>
+    pathname === route || pathname.startsWith(`${route}/`)
+  )
+
   if (
     !user &&
-    protectedRoutes.some(route =>
-      request.nextUrl.pathname.startsWith(route) ||
-      request.nextUrl.pathname === route.replace(/\/$/, '')
-    )
+    isProtectedRoute
   ) {
-    // no user, potentially respond by redirecting the user to the login page
     const url = request.nextUrl.clone()
-    url.pathname = '/login'
+    url.pathname = pathname === '/update-password' ? '/forgot-password' : '/login'
+    url.searchParams.set('next', pathname)
     return NextResponse.redirect(url)
   }
 
-  if (
-    user &&
-    authRoutes.some(route =>
-      request.nextUrl.pathname.startsWith(route) ||
-      request.nextUrl.pathname === route.replace(/\/$/, '')
-    )
-  ) {
+  if (user && isAuthRoute) {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
+    url.search = ''
     return NextResponse.redirect(url)
   }
-
-
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is.
   // If you're creating a new response object with NextResponse.next() make sure to:

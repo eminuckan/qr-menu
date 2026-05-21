@@ -4,6 +4,7 @@ import { Inter, Chakra_Petch } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import NextTopLoader from "nextjs-toploader";
 import { Poppins, Roboto, Montserrat, Raleway } from 'next/font/google';
+import { ThemeProvider } from "@/components/providers/theme-provider";
 import "./styles/globals.css";
 const inter = Inter({
   subsets: ["latin"],
@@ -50,7 +51,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="tr" className={`
+    <html lang="tr" suppressHydrationWarning className={`
                 ${inter.className} 
                 ${poppins.variable} 
                 ${roboto.variable} 
@@ -59,44 +60,46 @@ export default function RootLayout({
                 ${chakraPetch.variable}
             `}>
       <body className="min-h-screen bg-background text-foreground">
-        <NextTopLoader height={5} />
-        {children}
-        <Toaster
-          position="top-center"
-          toastOptions={{
-            duration: 4000,
-            style: {
-              background: '#fff',
-              color: '#333',
-              padding: '16px',
-              borderRadius: '8px',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-              fontSize: '14px',
-              maxWidth: '400px',
-              border: '1px solid #e2e8f0',
-            },
-            success: {
+        <ThemeProvider>
+          <NextTopLoader height={5} />
+          {children}
+          <Toaster
+            position="top-center"
+            toastOptions={{
+              duration: 4000,
               style: {
-                backgroundColor: '#f8fafc',
-                border: '1px solid #22c55e',
+                background: '#fff',
+                color: '#333',
+                padding: '16px',
+                borderRadius: '8px',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                fontSize: '14px',
+                maxWidth: '400px',
+                border: '1px solid #e2e8f0',
               },
-              iconTheme: {
-                primary: '#22c55e',
-                secondary: '#ffffff',
+              success: {
+                style: {
+                  backgroundColor: '#f8fafc',
+                  border: '1px solid #22c55e',
+                },
+                iconTheme: {
+                  primary: '#22c55e',
+                  secondary: '#ffffff',
+                },
               },
-            },
-            error: {
-              style: {
-                backgroundColor: '#f8fafc',
-                border: '1px solid #ef4444',
+              error: {
+                style: {
+                  backgroundColor: '#f8fafc',
+                  border: '1px solid #ef4444',
+                },
+                iconTheme: {
+                  primary: '#ef4444',
+                  secondary: '#ffffff',
+                },
               },
-              iconTheme: {
-                primary: '#ef4444',
-                secondary: '#ffffff',
-              },
-            },
-          }}
-        />
+            }}
+          />
+        </ThemeProvider>
       </body>
     </html>
   );

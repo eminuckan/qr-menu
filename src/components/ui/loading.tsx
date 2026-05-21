@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { ComponentProps } from "react";
+import loadingAnimation from "./loading.json";
 
 const LottieComponent = dynamic(() => import("lottie-react"), { ssr: false });
 
@@ -14,10 +14,10 @@ export const Loading = ({ className }: LoadingProps) => {
         <div className={`flex items-center justify-center min-h-[400px] ${className}`}>
             <div className="w-60 h-60">
                 <LottieComponent
-                    animationData={require("./loading.json")}
+                    animationData={loadingAnimation}
                     loop
                 />
             </div>
         </div>
     );
-}; 
+};
